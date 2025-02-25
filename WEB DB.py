@@ -3,14 +3,16 @@ import mysql.connector
 from mysql.connector import Error
 
 app = Flask(__name__)
-app.secret_key = 'your_secret_key'  
+app.secret_key = 'your_secret_key'  # Needed for flashing messages
+
+# Function to connect to the database
 def get_db_connection():
     try:
         conn = mysql.connector.connect(
-            host="127.0.0.1", 
-            user="root",       
-            password="Admin",  
-            database="usersdb"   
+            host="127.0.0.1",  # Replace with your database host
+            user="root",       # Replace with your database user
+            password="Admin",  # Replace with your database password
+            database="usersdb" # Replace with your database name
         )
         if conn.is_connected():
             return conn
@@ -18,12 +20,12 @@ def get_db_connection():
         print(f"Error: {e}")
         return None
 
-#Route to display the HTML
+# Route to display the HTML form
 @app.route('/')
 def index():
     return render_template('index.html')
 
-#Route to handle login
+# Route to handle login
 @app.route('/login', methods=['POST'])
 def login():
     student_id = request.form['student_id']
@@ -32,7 +34,7 @@ def login():
     conn = get_db_connection()
     if conn is None:
         flash('Database connection failed')
-        return render_template('index.html') 
+        return render_template('index.html')  # Stay on the login page
     
     cursor = conn.cursor(dictionary=True)
     cursor.execute('SELECT * FROM users WHERE student_id = %s AND password = %s', (student_id, password))
@@ -43,9 +45,9 @@ def login():
         return redirect(url_for('dashboard'))
     else:
         flash('Invalid student ID or password')
-        return render_template('index.html')
+        return render_template('index.html')  # Stay on the login page
 
-#display the dashboard after successful login
+# Route to display the dashboard after successful login
 @app.route('/dashboard')
 def dashboard():
     return render_template('Dashboard.html')
