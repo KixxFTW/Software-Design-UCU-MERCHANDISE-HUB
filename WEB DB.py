@@ -10,7 +10,7 @@ def get_db_connection():
             host="127.0.0.1", 
             user="root",       
             password="Admin",  
-            database="usersdb"   
+            database="users"   
         )
         if conn.is_connected():
             return conn
