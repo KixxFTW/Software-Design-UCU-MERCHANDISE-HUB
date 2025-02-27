@@ -3,7 +3,7 @@ import mysql.connector
 from mysql.connector import Error
 
 app = Flask(__name__)
-app.secret_key = 'your_secret_key'  
+app.secret_key = 'F9835XTG'  
 def get_db_connection():
     try:
         conn = mysql.connector.connect(
