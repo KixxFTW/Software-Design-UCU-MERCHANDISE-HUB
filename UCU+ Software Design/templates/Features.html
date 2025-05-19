@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Urdaneta City University</title>
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/UCULOGO.png') }}">
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='images/UCULOGO.png') }}">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css?family=Ubuntu:400,800" rel="stylesheet">
+</head>
+<body>
+    <div class="area">
+        <ul class="circles">
+            <li></li>
+            <li></li>
+            <li></li>
+            <li></li>
+            <li></li>
+            <li></li>
+            <li></li>
+            <li></li>
+            <li></li>
+            <li></li>
+        </ul>
+    </div>
+    <div class="navbar">
+        <div class="icon">
+            <h2 class="logo">
+                <a href="{{ url_for('index') }}">
+                    <img src="{{ url_for('static', filename='images/logo2 (1).png') }}" alt="UCU Logo">
+                </a>
+            </h2>
+        </div>
+    
+        <div class="menu">
+            <div class="menu-toggle" id="menuToggle">&#9776;</div> <!-- Hamburger Button -->
+            <div class="menu-links" id="menuLinks">
+                <ul>
+                    <li><a href="{{ url_for('index') }}">HOME</a></li>
+                    <li><a href="{{ url_for('blog') }}">ANNOUNCEMENTS</a></li>
+                    <li><a href="https://ucu.edu.ph/history">ABOUT</a></li>
+                    <li><a href="https://ucu.edu.ph/citizens-charter">ADMINISTRATION</a></li>
+                    <li><a href="https://ucu.edu.ph/courses">ACADEMICS</a></li>
+                    <li><a href="#">ADMISSIONS</a></li>
+                    <li><a href="#" id="contactBtn">CONTACT US</a></li>
+                    <li><a href="{{ url_for('features_simple') }}">FEATURES</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    <!-- Features Section -->
+    <section class="features-section">
+        <div class="container">
+            <h1 class="text-center mb-5">Main Features of Our Web App</h1>
+            <div class="row">
+                <div class="col-md-4 text-center">
+                    <i class="fas fa-user-graduate fa-3x mb-3 text-primary"></i>
+                    <h3>Student & Instructor Dashboard</h3>
+                    <p>Access your grades, attendance, and academic calendar all in one place.</p>
+                </div>
+                <div class="col-md-4 text-center">
+                    <i class="fas fa-shopping-cart fa-3x mb-3 text-success"></i>
+                    <h3>Merchandise Hub</h3>
+                    <p>Shop for official department shirts, ID laces, and bundles with ease.</p>
+                </div>
+                <div class="col-md-4 text-center">
+                    <i class="fas fa-calendar-alt fa-3x mb-3 text-warning"></i>
+                    <h3>Academic Calendar</h3>
+                    <p>Stay updated with upcoming events, exams, and deadlines.</p>
+                </div>
+            </div>
+            <div class="row mt-5">
+                <div class="col-md-4 text-center">
+                    <i class="fas fa-book fa-3x mb-3 text-danger"></i>
+                    <h3>Enrolled Subjects</h3>
+                    <p>View your enrolled courses and their schedules at a glance.</p>
+                </div>
+                <div class="col-md-4 text-center">
+                    <i class="fas fa-lock fa-3x mb-3 text-info"></i>
+                    <h3>Secure Login</h3>
+                    <p>Enjoy a secure and seamless login experience with OTP verification.</p>
+                </div>
+                <div class="col-md-4 text-center">
+                    <i class="fas fa-cogs fa-3x mb-3 text-secondary"></i>
+                    <h3>Settings</h3>
+                    <p>Customize your profile and manage your account settings effortlessly.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Other Features Section -->
+    <section class="other-features-section">
+        <div class="container">
+            <h1 class="text-center mb-5">Other Features of Our Web App</h1>
+            <div class="row">
+                <div class="col-md-4 text-center">
+                    <i class="fas fa-bell fa-3x mb-3 text-primary"></i>
+                    <h3>Notifications</h3>
+                    <p>Stay informed with real-time notifications about grades, events, and announcements.</p>
+                </div>
+                <div class="col-md-4 text-center">
+                    <i class="fas fa-shopping-cart fa-3x mb-3 text-success"></i>
+                    <h3>Shopping Cart</h3>
+                    <p>Add items to your cart and manage your merchandise selections easily.</p>
+                </div>
+                <div class="col-md-4 text-center">
+                    <i class="fas fa-envelope fa-3x mb-3 text-warning"></i>
+                    <h3>Contact Form</h3>
+                    <p>Get in touch with administrators and staff through our integrated contact form system.</p>
+                </div>
+            </div>
+            <div class="row mt-5">
+                <div class="col-md-4 text-center">
+                    <i class="fas fa-user-shield fa-3x mb-3 text-info"></i>
+                    <h3>Admin Dashboard</h3>
+                    <p>Manage users, monitor transactions, and control merchandise inventory through the admin panel.</p>
+                </div>
+                <div class="col-md-4 text-center">
+                    <i class="fas fa-shield-alt fa-3x mb-3 text-secondary"></i>
+                    <h3>Data Security</h3>
+                    <p>Enjoy a secure platform with encrypted data and privacy protection.</p>
+                </div>
+                <div class="col-md-4 text-center">
+                    <i class="fas fa-credit-card fa-3x mb-3 text-primary"></i>
+                    <h3>Payment System</h3>
+                    <p>Pay for merchandise and other services directly through the platform.</p>
+                </div>
+            </div>
+            <div class="row mt-5">
+                <div class="col-md-4 text-center">
+                    <i class="fas fa-tasks fa-3x mb-3 text-success"></i>
+                    <h3>Pending Assignments</h3>
+                    <p>Keep track of your assignments and their deadlines.</p>
+                </div>
+                <div class="col-md-4 text-center">
+                    <i class="fas fa-graduation-cap fa-3x mb-3 text-warning"></i>
+                    <h3>Grades Overview</h3>
+                    <p>View your grades for all subjects in one place.</p>
+                </div>
+                <div class="col-md-4 text-center">
+                    <i class="fas fa-calendar-alt fa-3x mb-3 text-info"></i>
+                    <h3>Event Calendar</h3>
+                    <p>Stay updated with upcoming events, exams, and deadlines through the academic calendar.</p>
+                </div>
+            </div>
+            <div class="row mt-5">
+                <div class="col-md-4 text-center">
+                    <i class="fas fa-blog fa-3x mb-3 text-success"></i>
+                    <h3>Blog Section</h3>
+                    <p>Stay updated with university news, announcements, and student life stories through our blog.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+    <footer>
+        <p class="liw">For more info visit</p>
+        <p>© 2025 School Project | Contact: Mark Jethro Valdez | Location: Manaoag Pangasinan</p>
+        <div class="icons">
+            <a href="https://www.facebook.com/UCUNewsOfficial"><ion-icon name="logo-facebook"></ion-icon></a>
+            <a href="https://www.instagram.com/ucuofficial/"><ion-icon name="logo-instagram"></ion-icon></a>
+            <a href="https://x.com/"><ion-icon name="logo-twitter"></ion-icon></a>
+            <a href="https://en.wikipedia.org/wiki/Urdaneta_City_University"><ion-icon name="logo-google"></ion-icon></a>
+            <a href="https://github.com/KixxFTW"><ion-icon name="logo-github"></ion-icon></a>
+        </div>
+    </footer>
+
+    <style>
+        body {
+            font-family: 'Ubuntu', sans-serif;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        @media (max-width: 360px) {
+            /* Mobile styles for very small screens */
+        }
+        @media (max-width: 375px) {
+            /* Mobile styles for small screens */
+        }
+        @media (max-width: 576px) {
+            /* Mobile styles for medium screens */
+        }
+        @media (max-width: 768px) {
+            /* Tablet styles */
+        }
+        @media (max-width: 992px) {
+            /* Small desktop styles */
+        }
+        @media (max-width: 1250px) {
+            /* Desktop styles */
+        }
+        
+        
+        /* Background Area */
+        .area {
+            background: rgb(72, 78, 202);
+            background: -webkit-linear-gradient(to left, #8f94fb, #4e54c8);
+            width: 100%;
+            min-height: 100vh; /* Changed from height to min-height */
+            position: fixed;
+            z-index: -1;
+
+        }
+
+        /* Circles Animation */
+        .circles {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        .circles li {
+            position: absolute;
+            display: block;
+            list-style: none;
+            width: 20px;
+            height: 20px;
+            background: rgba(255, 255, 255, 0.2);
+            animation: animate 25s linear infinite;
+            bottom: -150px;
+        }
+
+        .circles li:nth-child(1) {
+            left: 25%;
+            width: 80px;
+            height: 80px;
+            animation-delay: 0s;
+        }
+
+        .circles li:nth-child(2) {
+            left: 10%;
+            width: 20px;
+            height: 20px;
+            animation-delay: 2s;
+            animation-duration: 12s;
+        }
+
+        .circles li:nth-child(3) {
+            left: 70%;
+            width: 20px;
+            height: 20px;
+            animation-delay: 4s;
+        }
+
+        .circles li:nth-child(4) {
+            left: 40%;
+            width: 60px;
+            height: 60px;
+            animation-delay: 0s;
+            animation-duration: 18s;
+        }
+
+        .circles li:nth-child(5) {
+            left: 65%;
+            width: 20px;
+            height: 20px;
+            animation-delay: 0s;
+        }
+
+        .circles li:nth-child(6) {
+            left: 75%;
+            width: 110px;
+            height: 110px;
+            animation-delay: 3s;
+        }
+
+        .circles li:nth-child(7) {
+            left: 35%;
+            width: 150px;
+            height: 150px;
+            animation-delay: 7s;
+        }
+
+        .circles li:nth-child(8) {
+            left: 50%;
+            width: 25px;
+            height: 25px;
+            animation-delay: 15s;
+            animation-duration: 45s;
+        }
+
+        .circles li:nth-child(9) {
+            left: 20%;
+            width: 15px;
+            height: 15px;
+            animation-delay: 2s;
+            animation-duration: 35s;
+        }
+
+        .circles li:nth-child(10) {
+            left: 85%;
+            width: 150px;
+            height: 150px;
+            animation-delay: 0s;
+            animation-duration: 11s;
+        }
+        @keyframes animate {
+            0% {
+                transform: translateY(0) rotate(0deg);
+                opacity: 1;
+                border-radius: 0;
+            }
+            100% {
+                transform: translateY(-1000px) rotate(720deg);
+                opacity: 0;
+                border-radius: 50%;
+            }
+        }
+        /* Footer */
+        footer {
+            width: 100%;
+            background-color: transparent;
+            color: #fff;
+            text-align: center;
+            padding: 20px 0;
+            margin-top: auto;
+        }
+
+        footer .icons {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        footer .icons a {
+            text-decoration: none;
+            color: #fff;
+            margin: 0 10px;
+        }
+
+        footer .icons ion-icon {
+            font-size: 30px;
+            transition: 0.3s ease;
+        }
+
+        footer .icons ion-icon:hover {
+            color: #ffee00;
+        }
+
+        footer p {
+            margin: 10px 0;
+        }
+        /* Navbar */
+                .navbar {
+            width: 1250px;
+            height: 90px;
+            margin: auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center; /* Vertically center items */
+        }
+        
+        .menu {
+            flex-grow: 1;
+            height: 90px;
+            display: flex;
+            justify-content: flex-end; /* Push items to the right */
+            align-items: center;
+        }
+        
+        .menu-links {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .menu ul {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 0;
+            padding: 0;
+        }
+        
+        .menu ul li {
+            list-style: none;
+            margin: 0 20px;
+            margin-top: 27px;
+            font-size: 14px;
+        }
+        
+        .menu ul li a {
+            text-decoration: none;
+            color: #fff;
+            font-family: Arial;
+            font-weight: bold;
+            transition: 0.4s ease-in-out;
+        }
+        
+        .menu ul li a:hover {
+            color: #ffee00;
+        }
+        .features-section {
+            padding: 60px 0;
+            background-color: #ffffff;
+            border-radius: 10px;
+            position: relative; /* Changed from center to relative */
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            margin: 100px auto 0; /* Updated margin to be responsive */
+            max-width: 1200px;
+            width: 90%; /* Added width for better mobile view */
+
+            /* Centering the container */
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+        }
+
+        .features-section h1 {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #4a6de5;
+        }
+
+        .features-section .row {
+            margin-top: 30px;
+        }
+
+        .features-section i {
+            color: #4a6de5;
+        }
+
+        .features-section h3 {
+            font-size: 1.5rem;
+            margin-top: 15px;
+            color: #333;
+        }
+
+        .features-section p {
+            font-size: 1rem;
+            color: #666;
+        }
+
+        .other-features-section {
+            padding: 60px 0;
+            background-color: #ffffff;
+            border-radius: 10px;
+            position: relative;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            margin: 100px auto 0;
+            max-width: 1200px;
+            width: 90%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+        }
+
+        .other-features-section h1 {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #4a6de5;
+        }
+
+        .other-features-section .row {
+            margin-top: 30px;
+        }
+
+        .other-features-section i {
+            color: #4a6de5;
+        }
+
+        .other-features-section h3 {
+            font-size: 1.5rem;
+            margin-top: 15px;
+            color: #333;
+        }
+
+        .other-features-section p {
+            font-size: 1rem;
+            color: #666;
+        }
+
+        /* Hamburger Menu for Mobile */
+        .menu-toggle {
+            color: #fff;
+            font-size: 30px;
+            cursor: pointer;
+            display: none; /* Initially hidden */
+        }
+
+        .menu-links.active {
+            display: block !important; /* Show menu */
+            position: absolute;
+            top: 90px; /* Adjust as needed */
+            left: 0;
+            background-color: rgba(72, 78, 202, 0.9); /* Match background */
+            width: 100%;
+            text-align: center;
+            z-index: 10;
+        }
+
+        .menu-links.active ul {
+            flex-direction: column; /* Stack items vertically */
+        }
+
+        .menu-links.active ul li {
+            margin: 20px 0;
+        }
+
+        /* Media Query for Mobile */
+        @media (max-width: 768px) {
+            .menu-links {
+                display: none; /* Hide menu links by default on mobile */
+                width: 100%;
+            }
+
+            .menu-toggle {
+                display: block; /* Show hamburger icon */
+            }
+        }
+
+        /* General Mobile Styles */
+        @media (max-width: 768px) {
+            /* Navbar */
+            .navbar {
+                width: 100%; /* Full width on mobile */
+                padding: 0 15px; /* Add some padding */
+            }
+
+            /* Ensure background covers full height */
+            .area {
+                min-height: 100vh;
+                height: auto;
+            }
+        }
+
+        @media (max-width: 576px) {
+            /* Navbar */
+            .menu ul li {
+                font-size: 12px; /* Reduce font size for menu items */
+            }
+
+            /* Footer */
+            footer p {
+                font-size: 0.8rem; /* Reduce footer text size */
+            }
+        }
+        
+    </style>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js"></script>
+        <script src="https://unpkg.com/ionicons@5.4.0/dist/ionicons.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const menuToggle = document.getElementById('menuToggle');
+            const menuLinks = document.getElementById('menuLinks');
+
+            menuToggle.addEventListener('click', function () {
+                menuLinks.classList.toggle('active'); // Toggle the 'active' class
+            });
+        });
+    </script>
+</body>
+</html>

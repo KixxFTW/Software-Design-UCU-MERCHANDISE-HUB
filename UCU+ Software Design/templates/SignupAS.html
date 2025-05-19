@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign Up</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='images/UCULOGO.png') }}">
+    <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
+    <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script> 
+</head>
+<body>
+    <div class="area">
+        <ul class="circles">
+            <li></li>
+            <li></li>
+            <li></li>
+            <li></li>
+            <li></li>
+            <li></li>
+            <li></li>
+            <li></li>
+            <li></li>
+            <li></li>
+        </ul>
+    </div>
+    <div class="signup-as">
+        <h2>Welcome to our Platform</h2>
+        
+        <div class="tabs">
+            <div class="tab active" onclick="switchTab('signup')">Sign Up</div>
+        </div>
+        
+        <div id="signup" class="tab-content">
+            <ul id="signup-options">
+                <li>
+                    <a onclick="showForm('student-signup')">
+                        <svg class="user-icon" viewBox="0 0 24 24">
+                            <defs>
+                                <linearGradient id="student-gradient1" class="onhover" x1="0%" y1="0%" x2="100%" y2="0%">
+                                    <stop offset="0%" style="stop-color:#253479;stop-opacity:1" />
+                                    <stop offset="100%" style="stop-color:#253479;stop-opacity:0.7" />
+                                </linearGradient>
+                                <linearGradient id="student-gradient2" class="onhover2" x1="0%" y1="0%" x2="0%" y2="100%">
+                                    <stop offset="0%" style="stop-color:#253479;stop-opacity:1" />
+                                    <stop offset="100%" style="stop-color:#253479;stop-opacity:0.7" />
+                                </linearGradient>
+                            </defs>
+                            <path fill="url(#student-gradient1)" d="M12,3L1,9L12,15L21,10.09V17H23V9M5,13.18V17.18L12,21L19,17.18V13.18L12,17L5,13.18Z" />
+                        </svg>
+                        <span>Student</span>
+                    </a>
+                </li>
+                <li>
+                    <a onclick="showForm('educator-signup')">
+                        <svg class="user-icon" viewBox="0 0 24 24">
+                            <defs>
+                                <linearGradient id="educator-gradient1" class="onhover" x1="0%" y1="0%" x2="100%" y2="0%">
+                                    <stop offset="0%" style="stop-color:#253479;stop-opacity:1" />
+                                    <stop offset="100%" style="stop-color:#253479;stop-opacity:0.7" />
+                                </linearGradient>
+                                <linearGradient id="educator-gradient2" class="onhover2" x1="0%" y1="0%" x2="0%" y2="100%">
+                                    <stop offset="0%" style="stop-color:#253479;stop-opacity:1" />
+                                    <stop offset="100%" style="stop-color:#253479;stop-opacity:0.7" />
+                                </linearGradient>
+                            </defs>
+                            <path fill="url(#educator-gradient1)" d="M20,17A2,2 0 0,0 22,15V4A2,2 0 0,0 20,2H9.46C9.81,2.61 10,3.3 10,4H20V15H11V17M15,7V9H9V22H7V16H5V22H3V14H1.5V9A2,2 0 0,1 3.5,7H15M8,4A2,2 0 0,1 6,6A2,2 0 0,1 4,4A2,2 0 0,1 6,2A2,2 0 0,1 8,4Z" />
+                        </svg>
+                        <span>Educator</span>
+                    </a>
+                </li>
+            </ul>
+            
+            <!-- Student Signup Form -->
+            <div id="student-signup" class="form-container">
+                <h3>Student Registration</h3>
+                <form action="/signup/student" method="POST">
+                    <div class="form-group">
+                        <label for="student-name">First Name</label>
+                        <input type="text" id="student-name" name="student-name" placeholder="Enter your first name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="student-last-name">Last Name</label>
+                        <input type="text" id="student-last-name" name="student-last-name" placeholder="Enter your last name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="student-email">Email Address</label>
+                        <input type="email" id="student-email" name="student-email" placeholder="Enter your email address" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="student-school">Student ID</label>
+                        <input type="text" id="student-school" name="student-school" placeholder="Enter your Student ID" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="student-course">Course</label>
+                        <input type="text" id="student-course" name="student-course" placeholder="Enter your course" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="student-password">Password</label>
+                        <input type="password" id="student-password" name="student-password" placeholder="Create a password" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="student-confirm-password">Confirm Password</label>
+                        <input type="password" id="student-confirm-password" name="student-confirm-password" placeholder="Confirm your password" required>
+                    </div>
+                    <button type="submit" class="form-submit">Create Account</button>
+                </form>
+                <button class="back-button" onclick="hideForm()">Back to Options</button>
+            </div>
+            
+            <!-- Educator Signup Form -->
+            <div id="educator-signup" class="form-container">
+                <h3>Instructor Registration</h3>
+                <form action="/signup/educator" method="POST">
+                    <div class="form-group">
+                        <label for="educator-name">Full Name</label>
+                        <input type="text" id="educator-name" name="educator-name" placeholder="Enter your full name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="educator-email">Email Address</label>
+                        <input type="email" id="educator-email" name="educator-email" placeholder="Enter your email address" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="educator-password">Password</label>
+                        <input type="password" id="educator-password" name="educator-password" placeholder="Create a password" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="educator-confirm-password">Confirm Password</label>
+                        <input type="password" id="educator-confirm-password" name="educator-confirm-password" placeholder="Confirm your password" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="educator-institution">Institution</label>
+                        <input type="text" id="educator-institution" name="educator-institution" placeholder="Enter your institution">
+                    </div>
+                    <div class="form-group">
+                        <label for="educator-subject">Subject/Specialty</label>
+                        <input type="text" id="educator-subject" name="educator-subject" placeholder="Enter your subject or specialty">
+                    </div>
+                    <button type="submit" class="form-submit">Create Account</button>
+                </form>
+                <button class="back-button" onclick="hideForm()">Back to Options</button>
+            </div>
+        </div>
+        <div class="login-redirect">
+            <p>
+                Already have an account? 
+                <a href="/">Click here to log in</a>
+            </p>
+        </div>
+    <style>
+        body {
+            overflow: hidden; 
+            font-family: 'Montserrat', sans-serif;
+            background-color: transparent;
+            display: flex; 
+            justify-content: center;
+            align-items: center; 
+            height: 100vh; 
+            margin: 0; 
+        }
+        
+        
+        .signup-as {
+        margin: 0; /* Remove unnecessary margin */
+        font-family: 'Montserrat', sans-serif;
+        padding: 20px; /* Adjust padding to fit the smaller size */
+        width: 600px; /* Set the width */
+        height: auto; /* Let the height adjust based on content */
+        -webkit-box-shadow: 0 0 20px 0 rgba(206, 206, 206, 0.5);
+        box-shadow: 0 0 20px 0 rgba(206, 206, 206, 0.5);
+        border-radius: 20px; /* Adjust border-radius for smaller size */
+        background-color: transparent; /* Semi-transparent background */
+        backdrop-filter: blur(10px); /* Optional: Adds a blur effect */
+        text-align: center; /* Center-align text inside the container */
+        position: relative; /* Position relative for absolute positioning of child elements */
+        transform: scale(0.9); /* Initial scale set to 0.9 */
+        transition: transform 0.3s ease; /* Smooth transition for scaling */
+        }
+        
+        .signup-as:hover {
+            transform: scale(1); /* Scale up to 1 on hover */
+        }
+        
+        .signup-as h2 {
+            font-size: 30px;
+            color: #000000;
+            font-weight: 700;
+            text-align: center;
+            position: relative;
+            padding: 0 0 18px 0;
+        }
+        
+        .signup-as h2:after {
+            content: '';
+            position: absolute;
+            left: 50%;
+            bottom: 0;
+            width: 50px;
+            height: 4px;
+            background: #f3f3f3;
+            margin-left: -25px;
+        }
+        
+        .signup-as ul {
+            text-align: center;
+            padding: 80px 0 0 0;
+            list-style: none;
+            margin: 0;
+        }
+        
+        .signup-as li {
+            display: inline-block;
+            margin: 0 60px;
+            vertical-align: top;
+        }
+        
+        .signup-as li span {
+            display: block;
+            font-size: 18px;
+            font-weight: 500;
+            color: #000000;
+            padding: 15px 0 0 0;
+        }
+        
+        .signup-as li a {
+            display: block;
+            width: 150px; /* Adjust width */
+            height: 150px; /* Adjust height */
+            border: 1px solid #d2d2d2;
+            border-radius: 0; /* Remove rounded corners */
+            text-align: center;
+            padding: 38px 0 0 0;
+            text-decoration: none;
+            cursor: pointer;
+        }
+        
+        .signup-as li a:hover {
+            background: #06978a;
+            background: -moz-linear-gradient(top, #ffffff 0%, #253479 100%);
+            background: -webkit-linear-gradient(top, #06978a 0%,#253479 100%);
+            background: linear-gradient(to bottom, #06978a 0%,#253479 100%);
+            filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#06978a', endColorstr='#253479',GradientType=0);
+        }
+        
+        .signup-as li a:hover span {
+            color: #FFF;
+        }
+        
+        .signup-as li a:hover .onhover stop {
+            stop-color: #fff !important;
+        }
+        
+        .signup-as li a:hover .onhover2 stop {
+            stop-color: #fff !important;
+        }
+        
+        .user-icon {
+            width: 50px; 
+            height: 50px; 
+            margin: 10px auto; 
+        }
+        
+        .tabs {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 40px;
+        }
+        
+        .tab {
+            padding: 15px 30px;
+            font-size: 18px;
+            font-weight: 500;
+            color: #42414B;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.3s ease;
+        }
+        
+        .tab.active {
+            color: #253479;
+            border-bottom: 2px solid #253479;
+        }
+        
+        /* Form styles */
+        .form-container {
+            display: none;
+            max-width: 600px;
+            margin: 40px auto 0;
+            padding: 30px;
+            background-color: #fff;
+            border-radius: 20px;
+            box-shadow: 0 0 15px rgba(0,0,0,0.1);
+        }
+        
+        .form-container h3 {
+            font-size: 24px;
+            color: #253479;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        
+        .form-group {
+            margin-bottom: 25px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #42414B;
+        }
+        
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #d2d2d2;
+            border-radius: 8px;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 16px;
+            transition: border 0.3s ease;
+        }
+        
+        .form-group input:focus {
+            outline: none;
+            border-color: #06978a;
+        }
+        
+        .form-submit {
+            background: linear-gradient(to bottom, #06978a 0%, #253479 100%);
+            color: white;
+            border: none;
+            border-radius: 30px;
+            padding: 14px 30px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            display: block;
+            margin: 0 auto;
+            transition: opacity 0.3s ease;
+        }
+        
+        .form-submit:hover {
+            opacity: 0.9;
+        }
+        
+        .back-button {
+            background: none;
+            border: none;
+            color: #253479;
+            cursor: pointer;
+            font-size: 16px;
+            display: block;
+            margin: 20px auto 0;
+            text-decoration: underline;
+        }
+        .area {
+        background:rgb(72, 78, 202);
+        background: -webkit-linear-gradient(to left, #8f94fb, #4e54c8);
+        width: 100%;
+        height: 100vh;
+        position: absolute;
+        z-index: -1; /* Place it behind the main content */
+    }
+
+    .circles {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+    }
+
+    .circles li {
+        position: absolute;
+        display: block;
+        list-style: none;
+        width: 20px;
+        height: 20px;
+        background: rgba(255, 255, 255, 0.2);
+        animation: animate 25s linear infinite;
+        bottom: -150px;
+    }
+
+    .circles li:nth-child(1) {
+        left: 25%;
+        width: 80px;
+        height: 80px;
+        animation-delay: 0s;
+    }
+
+    .circles li:nth-child(2) {
+        left: 10%;
+        width: 20px;
+        height: 20px;
+        animation-delay: 2s;
+        animation-duration: 12s;
+    }
+
+    .circles li:nth-child(3) {
+        left: 70%;
+        width: 20px;
+        height: 20px;
+        animation-delay: 4s;
+    }
+
+    .circles li:nth-child(4) {
+        left: 40%;
+        width: 60px;
+        height: 60px;
+        animation-delay: 0s;
+        animation-duration: 18s;
+    }
+
+    .circles li:nth-child(5) {
+        left: 65%;
+        width: 20px;
+        height: 20px;
+        animation-delay: 0s;
+    }
+
+    .circles li:nth-child(6) {
+        left: 75%;
+        width: 110px;
+        height: 110px;
+        animation-delay: 3s;
+    }
+
+    .circles li:nth-child(7) {
+        left: 35%;
+        width: 150px;
+        height: 150px;
+        animation-delay: 7s;
+    }
+
+    .circles li:nth-child(8) {
+        left: 50%;
+        width: 25px;
+        height: 25px;
+        animation-delay: 15s;
+        animation-duration: 45s;
+    }
+
+    .circles li:nth-child(9) {
+        left: 20%;
+        width: 15px;
+        height: 15px;
+        animation-delay: 2s;
+        animation-duration: 35s;
+    }
+
+    .circles li:nth-child(10) {
+        left: 85%;
+        width: 150px;
+        height: 150px;
+        animation-delay: 0s;
+        animation-duration: 11s;
+    }
+
+    @keyframes animate {
+        10% {
+            transform: translateY(0) rotate(0deg);
+            opacity: 2;
+            border-radius: 0;
+        }
+
+        100% {
+            transform: translateY(-1000px) rotate(720deg);
+            opacity: 0;
+            border-radius: 50%;
+        }
+    }
+
+    .login-redirect {
+        margin-top: 20px;
+        text-align: center;
+        font-size: 18px;
+        color:rgb(0, 0, 0);
+    }
+
+    .login-redirect a {
+        color:rgb(255, 255, 255);
+        text-decoration: none;
+        font-weight: 500;
+        transition: color 0.3s ease;
+    }
+
+    .login-redirect a:hover {
+        color: #06978a;
+    }
+    </style>
+    <script>
+        function switchTab(tabName) {
+            // Hide all tab contents
+            const tabContents = document.querySelectorAll('.tab-content');
+            tabContents.forEach(content => {
+                content.style.display = 'none';
+            });
+            
+            // Remove active class from all tabs
+            const tabs = document.querySelectorAll('.tab');
+            tabs.forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Show selected tab content and mark tab as active
+            document.getElementById(tabName).style.display = 'block';
+            document.querySelector(`.tab[onclick="switchTab('${tabName}')"]`).classList.add('active');
+            
+            // Reset form visibility
+            hideForm();
+        }
+        
+        function showForm(formId) {
+            // Hide the options
+            if (document.getElementById('signup').style.display !== 'none') {
+                document.getElementById('signup-options').style.display = 'none';
+            } else {
+                document.getElementById('login-options').style.display = 'none';
+            }
+            
+            // Show the selected form
+            document.getElementById(formId).style.display = 'block';
+        }
+        
+        function hideForm() {
+            // Hide all forms
+            const forms = document.querySelectorAll('.form-container');
+            forms.forEach(form => {
+                form.style.display = 'none';
+            });
+            
+            // Show the options
+            document.getElementById('signup-options').style.display = 'block';
+            if (document.getElementById('login-options')) {
+                document.getElementById('login-options').style.display = 'block';
+            }
+        }
+
+        // Client-side form validation and success popup
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add form submission handlers for both forms
+            const studentForm = document.getElementById('student-form');
+            const educatorForm = document.getElementById('educator-form');
+            
+            // Handle student form submission
+            if (studentForm) {
+                studentForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    
+                    // Check if passwords match
+                    const password = document.getElementById('student-password').value;
+                    const confirmPassword = document.getElementById('student-confirm-password').value;
+                    
+                    if (password !== confirmPassword) {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Password Error',
+                            text: 'Passwords do not match. Please try again.',
+                            confirmButtonText: 'Try Again'
+                        });
+                        return;
+                    }
+                    
+                    // Submit the form via AJAX
+                    const formData = new FormData(studentForm);
+                    
+                    fetch('/signup/student', {
+                        method: 'POST',
+                        body: formData
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            // Show success popup
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Registration Successful!',
+                                text: 'Your student account has been created successfully.',
+                                confirmButtonText: 'Continue to Login',
+                                confirmButtonColor: '#253479'
+                            }).then((result) => {
+                                if (result.isConfirmed) {
+                                    window.location.href = '/';
+                                }
+                            });
+                        } else {
+                            // Show error popup
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Registration Failed',
+                                text: data.message || 'An error occurred during registration.',
+                                confirmButtonText: 'Try Again'
+                            });
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Server Error',
+                            text: 'An unexpected error occurred. Please try again later.',
+                            confirmButtonText: 'OK'
+                        });
+                    });
+                });
+            }
+            
+            // Handle educator form submission
+            if (educatorForm) {
+                educatorForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    
+                    // Check if passwords match
+                    const password = document.getElementById('educator-password').value;
+                    const confirmPassword = document.getElementById('educator-confirm-password').value;
+                    
+                    if (password !== confirmPassword) {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Password Error',
+                            text: 'Passwords do not match. Please try again.',
+                            confirmButtonText: 'Try Again'
+                        });
+                        return;
+                    }
+                    
+                    // Submit the form via AJAX
+                    const formData = new FormData(educatorForm);
+                    
+                    fetch('/signup/educator', {
+                        method: 'POST',
+                        body: formData
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            // Show success popup
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Registration Successful!',
+                                text: 'Your educator account has been created successfully.',
+                                confirmButtonText: 'Continue to Login',
+                                confirmButtonColor: '#253479'
+                            }).then((result) => {
+                                if (result.isConfirmed) {
+                                    window.location.href = '/';
+                                }
+                            });
+                        } else {
+                            // Show error popup
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Registration Failed',
+                                text: data.message || 'An error occurred during registration.',
+                                confirmButtonText: 'Try Again'
+                            });
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Server Error',
+                            text: 'An unexpected error occurred. Please try again later.',
+                            confirmButtonText: 'OK'
+                        });
+                    });
+                });
+            }
+        });
+
+        // Check if the signup was successful from server flash messages
+    </script>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <script>
+                {% for category, message in messages %}
+                    if ('{{ category }}' === 'success') {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Success!',
+                            text: '{{ message }}',
+                            confirmButtonText: 'OK'
+                        });
+                    } else if ('{{ category }}' === 'danger') {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error!',
+                            text: '{{ message }}',
+                            confirmButtonText: 'Try Again'
+                        });
+                    }
+                {% endfor %}
+            </script>
+        {% endif %}
+    {% endwith %}
+</body>
+</html>
