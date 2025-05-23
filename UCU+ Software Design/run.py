@@ -1878,5 +1878,10 @@ def chrome_devtools():
         'Content-Type': 'application/json',
         'Access-Control-Allow-Origin': '*'
     }
+
+# Add this with your other routes
+@app.route('/visual-aid')
+def visual_aid():
+    return render_template('VisualAid.html')
 if __name__ == '__main__':
     app.run(debug=True, port=5000)

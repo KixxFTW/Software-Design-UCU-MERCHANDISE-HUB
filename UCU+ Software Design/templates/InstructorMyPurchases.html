@@ -17,9 +17,10 @@
                 <h1><img src="{{ url_for('static', filename='images/UCULOGO.png') }}" alt="Logo"><br>UCU+ INSTRUCTOR PORTAL</h1>
             </div>
             <a href="{{ url_for('instructor_dashboard') }}" class="nav-item"><i class="material-icons">dashboard</i><span>Dashboard</span></a>
+            <a href="{{ url_for('instructor_dashboard') }}#weekly-schedule" class="nav-item"><i class="material-icons">schedule</i><span>Weekly Schedule</span></a>
             <a href="{{ url_for('instructor_dashboard') }}#grades-section" class="nav-item"><i class="material-icons">grade</i><span>Grades</span></a>
-            <a href="{{ url_for('instructor_dashboard') }}#department-shirts" class="nav-item"><i class="material-icons">shopping_cart</i><span>Merch</span></a>
             <a href="{{ url_for('instructor_dashboard') }}#calendar-section" class="nav-item"><i class="material-icons">event</i><span>Calendar</span></a>
+            <a href="{{ url_for('instructor_dashboard') }}#department-shirts" class="nav-item"><i class="material-icons">shopping_cart</i><span>Merch</span></a>
             <a href="{{ url_for('instructor_payment') }}" class="nav-item"><i class="material-icons">payment</i><span>Payment</span></a>
             <a href="{{ url_for('instructor_my_purchases') }}" class="nav-item active"><i class="material-icons">receipt</i><span>My Purchases</span></a>
             <a href="{{ url_for('instructor_settings') }}" class="nav-item"><i class="material-icons">settings</i><span>Settings</span></a>

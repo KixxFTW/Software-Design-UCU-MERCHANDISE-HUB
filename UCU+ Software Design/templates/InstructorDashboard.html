@@ -24,9 +24,10 @@
                 <h1><img src="{{ url_for('static', filename='images/UCULOGO.png') }}" alt="Logo"><br>UCU+ INSTRUCTOR PORTAL</h1>
             </div>
             <a href="{{ url_for('instructor_dashboard') }}" class="nav-item"><i class="material-icons">dashboard</i><span>Dashboard</span></a>
+            <a href="{{ url_for('instructor_dashboard') }}#weekly-schedule" class="nav-item"><i class="material-icons">schedule</i><span>Weekly Schedule</span></a>
             <a href="{{ url_for('instructor_dashboard') }}#grades-section" class="nav-item"><i class="material-icons">grade</i><span>Grades</span></a>
-            <a href="{{ url_for('instructor_dashboard') }}#department-shirts" class="nav-item"><i class="material-icons">shopping_cart</i><span>Merch</span></a>
             <a href="{{ url_for('instructor_dashboard') }}#calendar-section" class="nav-item"><i class="material-icons">event</i><span>Calendar</span></a>
+            <a href="{{ url_for('instructor_dashboard') }}#department-shirts" class="nav-item"><i class="material-icons">shopping_cart</i><span>Merch</span></a>
             <a href="{{ url_for('instructor_payment') }}" class="nav-item"><i class="material-icons">payment</i><span>Payment</span></a>
             <a href="{{ url_for('instructor_my_purchases') }}" class="nav-item active"><i class="material-icons">receipt</i><span>My Purchases</span></a>
             <a href="{{ url_for('instructor_settings') }}" class="nav-item"><i class="material-icons">settings</i><span>Settings</span></a>
@@ -140,7 +141,7 @@
             </section>
             <br><br><br><br><br><br>
             <!-- Class Schedule Section -->
-            <section class="class-schedule">
+            <section id="weekly-schedule" class="class-schedule">
                 <h2>Weekly Schedule</h2>
                 <div class="schedule-container">
                     <div class="schedule-header">
@@ -197,9 +198,9 @@
 
                         <div class="time-slot">3:00 PM</div>
                         <div class="class-slot">-</div>
-                        <div class="class-slot">CPE 501<br>Room 501</div>
+                        <div class="class-slot">CPE 403<br>Room 403</div>
                         <div class="class-slot">-</div>
-                        <div class="class-slot">CPE 501<br>Room 501</div>
+                        <div class="class-slot">CPE 403<br>Room 403</div>
                         <div class="class-slot">-</div>
 
                         <div class="time-slot">5:00 PM</div>
@@ -2173,5 +2174,44 @@ document.addEventListener('DOMContentLoaded', function() {
             localStorage.setItem('activeNavItem', this.getAttribute('href'));
         });
     });
+});
+</script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Add smooth scrolling for schedule link
+    document.querySelectorAll('a[href*="#weekly-schedule"]').forEach(link => {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            const scheduleSection = document.getElementById('weekly-schedule');
+            if (scheduleSection) {
+                scheduleSection.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start'
+                });
+                // Update active state
+                document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+                this.classList.add('active');
+            }
+        });
+    });
+
+    // Check for stored scroll target
+    const scrollTarget = localStorage.getItem('scrollTarget');
+    if (scrollTarget) {
+        const targetSection = document.getElementById(scrollTarget);
+        if (targetSection) {
+            setTimeout(() => {
+                targetSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                // Clear the stored target
+                localStorage.removeItem('scrollTarget');
+                // Update active state
+                document.querySelectorAll('.nav-item').forEach(item => {
+                    if (item.getAttribute('href').includes(scrollTarget)) {
+                        item.classList.add('active');
+                    }
+                });
+            }, 300); // Small delay to ensure content is loaded
+        }
+    }
 });
 </script>

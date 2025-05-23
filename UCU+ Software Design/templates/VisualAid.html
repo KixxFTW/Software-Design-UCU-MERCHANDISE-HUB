@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UCU+ Visual Guide</title>
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='images/UCULOGO.png') }}">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+</head>
+<body>
+    <div class="area">
+        <ul class="circles">
+            <li></li>
+            <li></li>
+            <li></li>
+            <li></li>
+            <li></li>
+            <li></li>
+            <li></li>
+            <li></li>
+            <li></li>
+            <li></li>
+        </ul>
+    </div>
+    <div class="container">
+        <div class="header">
+            <a href="{{ url_for('index') }}" class="logo-link">
+                <img src="{{ url_for('static', filename='images/UCULOGO.png') }}" alt="UCU Logo">
+            </a>
+            <h1>UCU+ Merchandise Hub - Visual Guide</h1>
+        </div>
+
+        <div class="section">
+            <h2>System Architecture</h2>
+            <div class="mermaid">
+                graph TD
+                    A[Web Browser] --> B[Flask Application]
+                    B --> C[(MySQL Database)]
+                    B --> D[Authentication Service]
+                    B --> E[Payment Service]
+                    
+                    subgraph Backend Services
+                    D
+                    E
+                    end
+                    
+                    subgraph Data lLayer
+                    C
+                    end
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>User Flow Diagram</h2>
+            <div class="mermaid">
+                flowchart LR
+                    A[Login] --> B{User Type}
+                    B -->|Student| C[Student Dashboard]
+                    B -->|Instructor| D[Instructor Dashboard]
+                    B -->|Admin| E[Admin Dashboard]
+                    
+                    C --> F[View Grades]
+                    C --> G[Shop Merch]
+                    D --> H[Manage Grades]
+                    D --> I[Order Merch]
+                    E --> J[Manage Users]
+                    E --> K[Process Orders]
+            </div>
+        </div>
+        <div class="section">
+            <h2>User Roles & Features</h2>
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <i class="material-icons">person</i>
+                    <h3>Students</h3>
+                    <ul>
+                        <li>View Grades</li>
+                        <li>Shop Merchandise</li>
+                        <li>Track Orders</li>
+                        <li>View Schedule</li>
+                    </ul>
+                </div>
+                <div class="feature-card">
+                    <i class="material-icons">school</i>
+                    <h3>Instructors</h3>
+                    <ul>
+                        <li>Manage Grades</li>
+                        <li>View Schedule</li>
+                        <li>Order Department Merch</li>
+                        <li>Track Purchases</li>
+                    </ul>
+                </div>
+                <div class="feature-card">
+                    <i class="material-icons">admin_panel_settings</i>
+                    <h3>Administrators</h3>
+                    <ul>
+                        <li>Manage Users</li>
+                        <li>Manage Products</li>
+                        <li>Process Orders</li>
+                        <li>System Settings</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>Payment Flow</h2>
+            <p>Supported payment methods:</p>
+            <ul>
+                <li>GCash</li>
+                <li>Maya</li>
+                <li>Bank Transfer</li>
+                <li>Cash on Delivery (Urdaneta City only)</li>
+            </ul>
+        </div>
+
+        <div class="section">
+            <h2>Security Features</h2>
+            <ul>
+                <li>Secure password hashing using bcrypt<br>
+                    -Turns passwords into secret codes so they can't be stolen easily.</li><br>
+                <li>Session-based authentication<br>
+                    -Ensures that only authorized users can access certain parts of the system.</li><br>
+                </li>
+                <li>CSRF protection<br>
+                    -Prevents cross-site request forgery attacks, which can compromise user data.</li><br>
+                <li>Input sanitization<br>
+                    -Prevents malicious input from being processed by the system.</li><br>
+                <li>Role-based access control<br> 
+                    - Only lets users do things they’re allowed to — like admins vs. regular users.</li><br>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'default',
+            securityLevel: 'loose',
+            flowchart: {
+                useMaxWidth: true,
+                htmlLabels: true,
+                curve: 'basis'
+            }
+        });
+        // Add any interactive features here
+        document.addEventListener('DOMContentLoaded', function() {
+            // Example: Add hover effects to feature cards
+            const cards = document.querySelectorAll('.feature-card');
+            cards.forEach(card => {
+                card.addEventListener('mouseenter', function() {
+                    this.style.transform = 'translateY(-5px)';
+                    this.style.transition = 'transform 0.3s ease';
+                });
+                card.addEventListener('mouseleave', function() {
+                    this.style.transform = 'translateY(0)';
+                });
+            });
+        });
+    </script>
+</body>
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            background: #f0f4fa;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            color:rgb(255, 255, 255);
+        }
+        .logo-link {
+            display: inline-block;
+            transition: transform 0.3s ease;
+        }
+
+        .logo-link:hover {
+            transform: scale(1.05);
+        }
+
+        .logo-link img {
+            width: 150px;
+            margin-bottom: 20px;
+            cursor: pointer;
+        }
+        .section {
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .flow-diagram {
+            width: 100%;
+            max-width: 800px;
+            margin: 20px auto;
+            display: block;
+        }
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .feature-card {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+        }
+        .feature-card i {
+            font-size: 48px;
+            color: #484eca;
+            margin-bottom: 15px;
+        }
+        code {
+            background: #f8f9fa;
+            padding: 2px 6px;
+            border-radius: 4px;
+            color: #484eca;
+        }
+        .mermaid {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            text-align: center;
+        }
+
+        .section h2 {
+            color: #484eca;
+            border-bottom: 2px solid #484eca;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        /* Background Animation */
+        .area {
+            background: rgb(72, 78, 202);
+            background: -webkit-linear-gradient(to left, #8f94fb, #4e54c8);
+            width: 100%;
+            min-height: 100vh;
+            position: fixed;
+            z-index: -1;
+        }
+
+        .circles {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        .circles li {
+            position: absolute;
+            display: block;
+            list-style: none;
+            width: 20px;
+            height: 20px;
+            background: rgba(255, 255, 255, 0.2);
+            animation: animate 25s linear infinite;
+            bottom: -150px;
+        }
+
+        .circles li:nth-child(1) {
+            left: 25%;
+            width: 80px;
+            height: 80px;
+            animation-delay: 0s;
+        }
+
+        .circles li:nth-child(2) {
+            left: 10%;
+            width: 20px;
+            height: 20px;
+            animation-delay: 2s;
+            animation-duration: 12s;
+        }
+
+        .circles li:nth-child(3) {
+            left: 70%;
+            width: 20px;
+            height: 20px;
+            animation-delay: 4s;
+        }
+
+        .circles li:nth-child(4) {
+            left: 40%;
+            width: 60px;
+            height: 60px;
+            animation-delay: 0s;
+            animation-duration: 18s;
+        }
+
+        .circles li:nth-child(5) {
+            left: 65%;
+            width: 20px;
+            height: 20px;
+            animation-delay: 0s;
+        }
+
+        .circles li:nth-child(6) {
+            left: 75%;
+            width: 110px;
+            height: 110px;
+            animation-delay: 3s;
+        }
+
+        .circles li:nth-child(7) {
+            left: 35%;
+            width: 150px;
+            height: 150px;
+            animation-delay: 7s;
+        }
+
+        .circles li:nth-child(8) {
+            left: 50%;
+            width: 25px;
+            height: 25px;
+            animation-delay: 15s;
+            animation-duration: 45s;
+        }
+
+        .circles li:nth-child(9) {
+            left: 20%;
+            width: 15px;
+            height: 15px;
+            animation-delay: 2s;
+            animation-duration: 35s;
+        }
+
+        .circles li:nth-child(10) {
+            left: 85%;
+            width: 150px;
+            height: 150px;
+            animation-delay: 0s;
+            animation-duration: 11s;
+        }
+
+        @keyframes animate {
+            10% {
+                transform: translateY(0) rotate(0deg);
+                opacity: 2;
+                border-radius: 0;
+            }
+
+            100% {
+                transform: translateY(-1000px) rotate(720deg);
+                opacity: 0;
+                border-radius: 50%;
+            }
+        }
+    </style>
+</html>
