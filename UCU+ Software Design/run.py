@@ -105,29 +105,51 @@ except ImportError:
 def get_google_provider_cfg():
     return requests.get(GOOGLE_DISCOVERY_URL).json()
 
-# Email sending function
+# Email sending function (using SendGrid API - works on Vercel without SMTP)
 def send_email(to_email, subject, body):
     try:
-        # Gmail SMTP settings
-        sender_email = "valdezmarkjethro@gmail.com"  # Your Gmail address
-        sender_password = "tmkd kzuh sqvc uvew"  # Your App Password
-        
-        # Create message
-        msg = MIMEText(body)
-        msg['Subject'] = subject
-        msg['From'] = sender_email
-        msg['To'] = to_email
+        api_key = os.environ.get('SENDGRID_API_KEY')
+        sender_email = os.environ.get('SENDGRID_FROM_EMAIL', 'valdezmarkjethro@gmail.com')
 
-        # Connect to Gmail SMTP server
-        with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
-            server.login(sender_email, sender_password)
-            server.sendmail(sender_email, to_email, msg.as_string())
+        if not api_key:
+            err = "SENDGRID_API_KEY environment variable is not set. Sign up at https://sendgrid.com, get your API key, and add it to your environment variables."
+            print(err)
+            return False, err
+
+        import urllib.request
+        import json
+
+        data = json.dumps({
+            "personalizations": [{"to": [{"email": to_email}]}],
+            "from": {"email": sender_email},
+            "subject": subject,
+            "content": [{"type": "text/plain", "value": body}]
+        }).encode('utf-8')
+
+        req = urllib.request.Request(
+            "https://api.sendgrid.com/v3/mail/send",
+            data=data,
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json"
+            },
+            method="POST"
+        )
+
+        with urllib.request.urlopen(req) as response:
             print(f"Email sent successfully to {to_email}")
-            return True
-            
+            return True, None
+
+    except urllib.error.HTTPError as e:
+        err_body = e.read().decode()
+        err_msg = f"SendGrid API error ({e.code}): {err_body}"
+        print(err_msg)
+        return False, err_msg
     except Exception as e:
-        print(f"Error sending email: {str(e)}")
-        return False
+        err_msg = str(e)
+        print(f"Error sending email: {err_msg}")
+        traceback.print_exc()
+        return False, err_msg
 
 def _is_admin() -> bool:
     # Admin logic in this project is currently based on hardcoded student_id/course.
@@ -2617,11 +2639,15 @@ def forgot_password():
             conn.commit()
 
             # Send the OTP via email
-            send_email(user['email'], "Password Reset OTP",
+            email_sent, email_err = send_email(user['email'], "Password Reset OTP",
                     f"Your OTP for resetting your password is: {otp}")
 
-            flash('An OTP has been sent to your email.', 'success')
-            return redirect(f'/reset_password/{uid}?type={user_type}')
+            if email_sent:
+                flash('An OTP has been sent to your email.', 'success')
+                return redirect(f'/reset_password/{uid}?type={user_type}')
+            else:
+                flash(f'Failed to send OTP email: {email_err}', 'danger')
+                return redirect('/')
         else:
             flash('No account found with the provided information.', 'danger')
 
