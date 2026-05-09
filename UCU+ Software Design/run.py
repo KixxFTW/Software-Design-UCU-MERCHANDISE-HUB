@@ -18,6 +18,15 @@ import random
 import smtplib
 from email.mime.text import MIMEText
 
+try:
+    from supabase import create_client, Client
+    supabase: Client = create_client(
+        "https://rvbmzkxqvwjjzjhejvhf.supabase.co",
+        "sb_publishable_lDzGD6sdw4mNYJCSLm2q5A_ybDInjYI"
+    )
+except Exception:
+    supabase = None
+
 # Initialize Flask app
 app = Flask(__name__)
 app.secret_key = 'Admin'  # Required for session and flash messages
