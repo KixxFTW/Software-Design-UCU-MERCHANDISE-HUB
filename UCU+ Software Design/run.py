@@ -2397,12 +2397,17 @@ def admin_payments():
                 p.status,
                 p.payment_date,
                 o.id AS order_id,
-                COALESCE(s.first_name, '') AS first_name,
-                COALESCE(s.last_name, o.student_id) AS last_name,
-                o.instructor_id AS instructor_name
+                o.student_id,
+                o.instructor_id,
+                COALESCE(s.first_name, s2.first_name, '') AS first_name,
+                COALESCE(s.last_name, s2.last_name, '') AS last_name,
+                COALESCE(e.full_name, e2.full_name, '') AS instructor_name
             FROM payments p
             LEFT JOIN orders o ON CONCAT('ORD-', o.id) = p.reference_number
             LEFT JOIN students s ON s.student_id = o.student_id
+            LEFT JOIN educators e ON e.id = o.instructor_id
+            LEFT JOIN students s2 ON s2.email = p.email
+            LEFT JOIN educators e2 ON e2.email = p.email
             ORDER BY p.payment_date DESC, p.id DESC
             """
         )
