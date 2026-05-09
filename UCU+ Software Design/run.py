@@ -2796,6 +2796,54 @@ def my_purchases():
                     order_map[oid]['image_url'] = img
         purchases = list(order_map.values())
 
+        # Also fetch historical completed payments whose orders were deleted (old bug)
+        cursor.execute("SELECT email FROM students WHERE student_id = %s", (student_id,))
+        student_row = cursor.fetchone()
+        student_email = student_row['email'] if student_row else None
+        if student_email:
+            cursor.execute(
+                """
+                SELECT
+                    p.id,
+                    p.amount AS total_amount,
+                    p.payment_method,
+                    p.reference_number,
+                    p.payment_date AS created_at
+                FROM payments p
+                WHERE p.email = %s AND p.status = 'Success'
+                  AND p.reference_number LIKE 'ORD-%'
+                  AND NOT EXISTS (
+                      SELECT 1 FROM orders o
+                      WHERE o.id = CAST(REPLACE(p.reference_number, 'ORD-', '') AS INTEGER)
+                  )
+                ORDER BY p.payment_date DESC, p.id DESC
+                """,
+                (student_email,)
+            )
+            for row in cursor.fetchall():
+                ref = row.get('reference_number') or ''
+                order_id_str = ref.replace('ORD-', '')
+                try:
+                    order_id = int(order_id_str)
+                except ValueError:
+                    order_id = row['id']
+                purchases.append({
+                    'order_id': order_id,
+                    'total_amount': float(row['total_amount'] or 0),
+                    'status': 'Completed',
+                    'payment_status': 'Success',
+                    'payment_method': row['payment_method'],
+                    'created_at': row['created_at'],
+                    'reference_number': ref,
+                    'image_url': '',
+                    'order_items': [{
+                        'name': 'Completed Order',
+                        'quantity': 1,
+                        'price': float(row['total_amount'] or 0),
+                        'image_url': ''
+                    }]
+                })
+
         cursor.close()
         conn.close()
 
@@ -2926,6 +2974,54 @@ def instructor_my_purchases():
                 if not order_map[oid]['image_url']:
                     order_map[oid]['image_url'] = img
         purchases = list(order_map.values())
+
+        # Also fetch historical completed payments whose orders were deleted (old bug)
+        instructor_email = session.get('email')
+        if instructor_email:
+            cursor.execute(
+                """
+                SELECT
+                    p.id,
+                    p.amount AS total_amount,
+                    p.payment_method,
+                    p.reference_number,
+                    p.payment_date AS created_at
+                FROM payments p
+                WHERE p.email = %s AND p.status = 'Success'
+                  AND p.reference_number LIKE 'ORD-%'
+                  AND NOT EXISTS (
+                      SELECT 1 FROM orders o
+                      WHERE o.id = CAST(REPLACE(p.reference_number, 'ORD-', '') AS INTEGER)
+                  )
+                ORDER BY p.payment_date DESC, p.id DESC
+                """,
+                (instructor_email,)
+            )
+            for row in cursor.fetchall():
+                ref = row.get('reference_number') or ''
+                order_id_str = ref.replace('ORD-', '')
+                try:
+                    order_id = int(order_id_str)
+                except ValueError:
+                    order_id = row['id']
+                purchases.append({
+                    'order_id': order_id,
+                    'total_amount': float(row['total_amount'] or 0),
+                    'status': 'Completed',
+                    'payment_status': 'Success',
+                    'payment_method': row['payment_method'],
+                    'delivery_option': '',
+                    'delivery_address': '',
+                    'created_at': row['created_at'],
+                    'reference_number': ref,
+                    'image_url': '',
+                    'order_items': [{
+                        'name': 'Completed Order',
+                        'quantity': 1,
+                        'price': float(row['total_amount'] or 0),
+                        'image_url': ''
+                    }]
+                })
 
         cursor.close()
         conn.close()
