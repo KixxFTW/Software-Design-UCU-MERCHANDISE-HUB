@@ -2483,16 +2483,31 @@ def admin_products():
                 flash('Please provide valid product details.', 'danger')
                 return redirect('/admin/dashboard')
 
-            # Handle image upload (optional on edit, required on add in the template)
+            # Handle image upload to Supabase Storage (optional on edit, required on add in the template)
             image = request.files.get('image')
             image_url = None
             if image and image.filename:
-                upload_folder = os.path.join('static', 'uploads', 'products')
-                os.makedirs(upload_folder, exist_ok=True)
-                filename = secure_filename(image.filename)
-                image_path = os.path.join(upload_folder, filename)
-                image.save(image_path)
-                image_url = f'/static/uploads/products/{filename}'
+                try:
+                    # Generate unique filename
+                    unique_filename = f"{uuid.uuid4()}_{secure_filename(image.filename)}"
+                    
+                    # Upload to Supabase Storage
+                    if supabase:
+                        image_data = image.read()
+                        response = supabase.storage.from_('products').upload(
+                            path=unique_filename,
+                            file=image_data,
+                            file_options={"content-type": image.content_type}
+                        )
+                        # Get public URL
+                        image_url = supabase.storage.from_('products').get_public_url(unique_filename)
+                    else:
+                        flash('Supabase not configured. Cannot upload image.', 'warning')
+                        image_url = None
+                except Exception as upload_err:
+                    print(f"Image upload error: {upload_err}")
+                    flash(f'Warning: Could not upload image: {str(upload_err)}. Continuing without image.', 'warning')
+                    image_url = None
 
             conn = get_db_connection()
             cursor = conn.cursor()
