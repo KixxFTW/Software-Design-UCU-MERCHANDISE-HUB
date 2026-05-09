@@ -108,10 +108,15 @@ def get_google_provider_cfg():
 # Email sending function
 def send_email(to_email, subject, body):
     try:
-        # Gmail SMTP settings
-        sender_email = "valdezmarkjethro@gmail.com"  # Your Gmail address
-        sender_password = "tmkdkzuhsqvcuvew"  # Your App Password (no spaces)
-        
+        # Gmail SMTP settings from environment variables
+        sender_email = os.environ.get('SMTP_EMAIL', 'valdezmarkjethro@gmail.com')
+        sender_password = os.environ.get('SMTP_PASSWORD')
+
+        if not sender_password:
+            err = "SMTP_PASSWORD environment variable is not set. Go to https://myaccount.google.com/apppasswords to generate an App Password, then set it in your environment variables."
+            print(err)
+            return False, err
+
         # Create message
         msg = MIMEText(body)
         msg['Subject'] = subject
@@ -124,7 +129,7 @@ def send_email(to_email, subject, body):
             server.sendmail(sender_email, to_email, msg.as_string())
             print(f"Email sent successfully to {to_email}")
             return True, None
-            
+
     except Exception as e:
         err_msg = str(e)
         print(f"Error sending email: {err_msg}")
