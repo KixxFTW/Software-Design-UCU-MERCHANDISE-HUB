@@ -37,6 +37,20 @@ DB_CONFIG = {
 def get_db_connection():
     return psycopg2.connect(cursor_factory=RealDictCursor, **DB_CONFIG)
 
+def _check_password(password: str, stored_hash) -> bool:
+    """Safely check a password against a bcrypt hash, handling invalid hashes gracefully."""
+    try:
+        password_bytes = password.encode('utf-8') if isinstance(password, str) else password
+        if isinstance(stored_hash, str):
+            stored_hash = stored_hash.encode('utf-8')
+        elif isinstance(stored_hash, bytearray):
+            stored_hash = bytes(stored_hash)
+        if not stored_hash or not stored_hash.startswith((b'$2a$', b'$2b$', b'$2y$', b'$2x$')):
+            return False
+        return bcrypt.checkpw(password_bytes, stored_hash)
+    except Exception:
+        return False
+
 # Google OAuth2 configuration
 GOOGLE_CLIENT_ID = '718773630578-uk82823k8jr69moufe0fl5rrg4r9dalf.apps.googleusercontent.com'
 GOOGLE_CLIENT_SECRET = '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'
@@ -726,11 +740,7 @@ def login():
 
         # Check if user exists and verify the password
         if user:
-            # Convert both password and stored hash to bytes if they aren't already
-            password_bytes = password.encode('utf-8')
-            stored_hash = user['password'].encode('utf-8') if isinstance(user['password'], str) else bytes(user['password'])
-            
-            if bcrypt.checkpw(password_bytes, stored_hash):
+            if _check_password(password, user['password']):
                 # Set session data
                 session['student_id'] = user['student_id']
                 session['first_name'] = user['first_name']
@@ -1278,12 +1288,12 @@ def update_password():
             return redirect('/settings')
 
         # Verify current password
-        if not bcrypt.checkpw(current_password.encode('utf-8'), user['password'].encode('utf-8')):
+        if not _check_password(current_password, user['password']):
             flash('Current password is incorrect.', 'danger')
             return redirect('/settings')
 
         # Hash the new password
-        hashed_password = bcrypt.hashpw(new_password.encode('utf-8'), bcrypt.gensalt())
+        hashed_password = bcrypt.hashpw(new_password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
 
         # Update password in database
         if 'is_instructor' in session and session['is_instructor']:
@@ -1339,16 +1349,7 @@ def instructor_login():
 
         # Check password
         try:
-            # Convert password to bytes
-            password_bytes = password.encode('utf-8')
-            # Convert stored hash to bytes, handling both string and bytearray cases
-            stored_hash = instructor['password']
-            if isinstance(stored_hash, str):
-                stored_hash = stored_hash.encode('utf-8')
-            elif isinstance(stored_hash, bytearray):
-                stored_hash = bytes(stored_hash)
-            
-            if bcrypt.checkpw(password_bytes, stored_hash):
+            if _check_password(password, instructor['password']):
                 # Store instructor info in session
                 session.clear()  # Clear any existing session
                 session['instructor_id'] = instructor['id']
@@ -1442,7 +1443,7 @@ def deactivate_account():
         cursor.execute(query, (session.get('student_id'),))
         user = cursor.fetchone()
 
-        if not user or not bcrypt.checkpw(password.encode('utf-8'), user['password'].encode('utf-8')):
+        if not user or not _check_password(password, user['password']):
             flash('Invalid password.', 'danger')
             return redirect('/settings')
 
@@ -1491,7 +1492,7 @@ def delete_account():
         cursor.execute(query, (session.get('student_id'),))
         user = cursor.fetchone()
 
-        if not user or not bcrypt.checkpw(password.encode('utf-8'), user['password'].encode('utf-8')):
+        if not user or not _check_password(password, user['password']):
             flash('Invalid password.', 'danger')
             return redirect('/settings')
 
@@ -1554,13 +1555,8 @@ def instructor_settings():
                     flash('Instructor not found.', 'danger')
                     return redirect(url_for('instructor_settings'))
                 
-                # Convert stored hash to bytes if it's a bytearray
-                stored_hash = instructor['password']
-                if isinstance(stored_hash, bytearray):
-                    stored_hash = bytes(stored_hash)
-
                 # Verify current password
-                if not bcrypt.checkpw(current_password.encode('utf-8'), stored_hash):
+                if not _check_password(current_password, instructor['password']):
                     flash('Current password is incorrect.', 'danger')
                     return redirect(url_for('instructor_settings'))
                 
@@ -1569,7 +1565,7 @@ def instructor_settings():
                     return redirect(url_for('instructor_settings'))
                 
                 # Update password
-                hashed_password = bcrypt.hashpw(new_password.encode('utf-8'), bcrypt.gensalt())
+                hashed_password = bcrypt.hashpw(new_password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
                 cursor.execute("UPDATE educators SET password = %s WHERE id = %s", 
                             (hashed_password, session['instructor_id']))
                 conn.commit()
@@ -2584,7 +2580,7 @@ def reset_password(user_id):
 
             if reset_request:
                 # Hash the new password
-                hashed_password = bcrypt.hashpw(new_password.encode('utf-8'), bcrypt.gensalt())
+                hashed_password = bcrypt.hashpw(new_password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
 
                 # Update the password in the database
                 cursor.execute("UPDATE students SET password = %s WHERE student_id = %s",
