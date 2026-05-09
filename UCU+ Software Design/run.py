@@ -376,14 +376,29 @@ def api_update_order_status(order_id: int):
                 amount = order.get('total_amount') or 0
                 payment_method = order.get('payment_method') or 'Unknown'
                 ref = reference_number if reference_number else f"ORD-{order_id}"
-                cursor.execute(
-                    """
-                    INSERT INTO payments (email, amount, payment_method, reference_number, status, payment_date)
-                    VALUES (%s, %s, %s, %s, 'Success', NOW())
-                    ON CONFLICT (reference_number) DO UPDATE SET status='Success', payment_date=NOW()
-                    """,
-                    (email, amount, payment_method, ref),
-                )
+                # Check if payment exists, update or insert
+                cursor.execute("SELECT id FROM payments WHERE reference_number = %s", (ref,))
+                existing = cursor.fetchone()
+                if existing:
+                    cursor.execute(
+                        "UPDATE payments SET status='Success', payment_date=NOW() WHERE reference_number = %s",
+                        (ref,),
+                    )
+                else:
+                    cursor.execute(
+                        """
+                        INSERT INTO payments (email, amount, payment_method, reference_number, status, payment_date)
+                        VALUES (%s, %s, %s, %s, 'Success', NOW())
+                        """,
+                        (email, amount, payment_method, ref),
+                    )
+
+        # Remove completed order from orders table
+        if new_status == 'completed':
+            try:
+                cursor.execute("DELETE FROM orders WHERE id = %s", (order_id,))
+            except Exception as del_err:
+                print(f"[api_update_order_status] Order delete warning: {del_err}")
 
         conn.commit()
         return jsonify({'success': True, 'status': new_status})
@@ -432,14 +447,22 @@ def api_update_order_payment_status(order_id: int):
                 amount = order.get('total_amount') or 0
                 payment_method = order.get('payment_method') or 'Unknown'
                 ref = f"ORD-{order_id}"
-                cursor.execute(
-                    """
-                    INSERT INTO payments (email, amount, payment_method, reference_number, status, payment_date)
-                    VALUES (%s, %s, %s, %s, 'Success', NOW())
-                    ON CONFLICT (reference_number) DO UPDATE SET status='Success', payment_date=NOW()
-                    """,
-                    (email, amount, payment_method, ref),
-                )
+                # Check if payment exists, update or insert
+                cursor.execute("SELECT id FROM payments WHERE reference_number = %s", (ref,))
+                existing = cursor.fetchone()
+                if existing:
+                    cursor.execute(
+                        "UPDATE payments SET status='Success', payment_date=NOW() WHERE reference_number = %s",
+                        (ref,),
+                    )
+                else:
+                    cursor.execute(
+                        """
+                        INSERT INTO payments (email, amount, payment_method, reference_number, status, payment_date)
+                        VALUES (%s, %s, %s, %s, 'Success', NOW())
+                        """,
+                        (email, amount, payment_method, ref),
+                    )
 
         # If marking as Refunded, remove from payments table
         if new_status == 'Refunded':
@@ -451,6 +474,8 @@ def api_update_order_payment_status(order_id: int):
         conn.commit()
         return jsonify({'success': True, 'payment_status': new_status})
     except Exception as e:
+        print(f"[api_update_order_payment_status] ERROR: {e}")
+        traceback.print_exc()
         return jsonify({'error': str(e)}), 500
     finally:
         if cursor:
@@ -1703,17 +1728,19 @@ def add_to_cart():
         # Add to cart in database using the resolved merchandise row ID
         item_db_id = item['id']
         if user_type == 'student_id':
-            cursor.execute("""
-                INSERT INTO cart_items (student_id, item_id, quantity)
-                VALUES (%s, %s, %s)
-                ON CONFLICT (student_id, item_id) DO UPDATE SET quantity = cart_items.quantity + EXCLUDED.quantity
-            """, (user_id, item_db_id, quantity))
+            cursor.execute("SELECT id, quantity FROM cart_items WHERE student_id = %s AND item_id = %s", (user_id, item_db_id))
+            existing = cursor.fetchone()
+            if existing:
+                cursor.execute("UPDATE cart_items SET quantity = %s WHERE id = %s", (existing['quantity'] + quantity, existing['id']))
+            else:
+                cursor.execute("INSERT INTO cart_items (student_id, item_id, quantity) VALUES (%s, %s, %s)", (user_id, item_db_id, quantity))
         else:
-            cursor.execute("""
-                INSERT INTO cart_items (instructor_id, item_id, quantity)
-                VALUES (%s, %s, %s)
-                ON CONFLICT (instructor_id, item_id) DO UPDATE SET quantity = cart_items.quantity + EXCLUDED.quantity
-            """, (user_id, item_db_id, quantity))
+            cursor.execute("SELECT id, quantity FROM cart_items WHERE instructor_id = %s AND item_id = %s", (user_id, item_db_id))
+            existing = cursor.fetchone()
+            if existing:
+                cursor.execute("UPDATE cart_items SET quantity = %s WHERE id = %s", (existing['quantity'] + quantity, existing['id']))
+            else:
+                cursor.execute("INSERT INTO cart_items (instructor_id, item_id, quantity) VALUES (%s, %s, %s)", (user_id, item_db_id, quantity))
         
         conn.commit()
         cursor.close()
@@ -2553,11 +2580,12 @@ def forgot_password():
             otp = random.randint(100000, 999999)
 
             # Save the OTP in the database (for example, in a 'password_resets' table)
-            cursor.execute(
-                "INSERT INTO password_resets (user_id, otp) VALUES (%s, %s) "
-                "ON CONFLICT (user_id) DO UPDATE SET otp = EXCLUDED.otp",
-                (user['student_id'], otp)
-            )
+            cursor.execute("SELECT id FROM password_resets WHERE user_id = %s", (user['student_id'],))
+            existing = cursor.fetchone()
+            if existing:
+                cursor.execute("UPDATE password_resets SET otp = %s WHERE user_id = %s", (otp, user['student_id']))
+            else:
+                cursor.execute("INSERT INTO password_resets (user_id, otp) VALUES (%s, %s)", (user['student_id'], otp))
             conn.commit()
 
             # Send the OTP via email
@@ -2632,11 +2660,12 @@ def generate_and_send_otp(user_id, email):
     # Save OTP in the database (password_resets table or a new table)
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute(
-        "INSERT INTO email_otps (user_id, otp) VALUES (%s, %s) "
-        "ON CONFLICT (user_id) DO UPDATE SET otp = EXCLUDED.otp",
-        (user_id, otp)
-    )
+    cursor.execute("SELECT id FROM email_otps WHERE user_id = %s", (user_id,))
+    existing = cursor.fetchone()
+    if existing:
+        cursor.execute("UPDATE email_otps SET otp = %s WHERE user_id = %s", (otp, user_id))
+    else:
+        cursor.execute("INSERT INTO email_otps (user_id, otp) VALUES (%s, %s)", (user_id, otp))
     conn.commit()
     cursor.close()
     conn.close()
