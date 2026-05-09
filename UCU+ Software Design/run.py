@@ -2741,8 +2741,9 @@ def generate_and_send_otp(user_id, email):
     conn.commit()
     cursor.close()
     conn.close()
+    
     # Send OTP via email
-    send_email(email, "Your OTP Code", f"Your OTP is: {otp}")
+    send_email(email, "Your OTP Code", f"Your OTP is: {otp}. This code expires in 10 minutes.")
 
 @app.route('/verify_otp/<user_id>', methods=['GET', 'POST'])
 def verify_otp(user_id):
@@ -2751,37 +2752,61 @@ def verify_otp(user_id):
         conn = get_db_connection()
         cursor = conn.cursor()
         
-        # Check OTP in password_resets table
-        cursor.execute(
-            """
-            SELECT * FROM password_resets 
-            WHERE user_id = %s AND otp = %s AND used = FALSE 
-            AND expires_at > CURRENT_TIMESTAMP
-            """,
-            (user_id, otp)
-        )
-        record = cursor.fetchone()
-        
-        if record:
-            # OTP is correct, mark it as used
+        try:
+            # Check OTP in password_resets table
             cursor.execute(
-                "UPDATE password_resets SET used = TRUE WHERE id = %s",
-                (record['id'],)
+                """
+                SELECT id, otp FROM password_resets 
+                WHERE user_id = %s AND otp = %s AND used = FALSE 
+                AND expires_at > NOW()
+                """,
+                (user_id, otp)
             )
-            conn.commit()
-            cursor.close()
-            conn.close()
+            record = cursor.fetchone()
             
-            # Set session for the user
-            session['student_id'] = user_id
-            session['verified'] = True
-            flash('OTP verified successfully! You are now logged in.', 'success')
-            return redirect('/dashboard')
-        else:
+            if record:
+                # Mark OTP as used
+                cursor.execute(
+                    "UPDATE password_resets SET used = TRUE WHERE id = %s",
+                    (record['id'],)
+                )
+                conn.commit()
+                
+                # Fetch user details from students table
+                cursor.execute(
+                    "SELECT student_id, first_name, last_name, email FROM students WHERE student_id = %s",
+                    (user_id,)
+                )
+                user = cursor.fetchone()
+                
+                if user:
+                    # Set session for the user
+                    session['student_id'] = user['student_id']
+                    session['first_name'] = user['first_name']
+                    session['last_name'] = user['last_name']
+                    session['email'] = user['email']
+                    session['verified'] = True
+                    flash('OTP verified successfully! You are now logged in.', 'success')
+                    cursor.close()
+                    conn.close()
+                    return redirect('/dashboard')
+                else:
+                    flash('User not found.', 'danger')
+                    cursor.close()
+                    conn.close()
+                    return redirect(f'/verify_otp/{user_id}')
+            else:
+                flash('Invalid or expired OTP. Please try again.', 'danger')
+                cursor.close()
+                conn.close()
+                return redirect(f'/verify_otp/{user_id}')
+        except Exception as e:
+            print(f"Error verifying OTP: {e}")
+            flash('An error occurred while verifying OTP.', 'danger')
             cursor.close()
             conn.close()
-            flash('Invalid or expired OTP. Please try again.', 'danger')
             return redirect(f'/verify_otp/{user_id}')
+    
     return render_template('VerifyOTP.html', user_id=user_id)
 
 @app.route('/features_simple')
