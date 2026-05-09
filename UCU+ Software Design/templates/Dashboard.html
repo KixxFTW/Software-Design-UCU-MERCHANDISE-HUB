@@ -799,6 +799,10 @@
             box-sizing: border-box;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
+
+        html, body {
+            overflow-x: hidden;
+        }
         @media (max-width: 576px) {
             body {
                 color: var(--text);
@@ -1442,6 +1446,7 @@
             white-space: nowrap;
             word-wrap: normal;
             direction: ltr;
+            font-feature-settings: 'liga';
             -webkit-font-feature-settings: 'liga';
             -webkit-font-smoothing: antialiased;
         }

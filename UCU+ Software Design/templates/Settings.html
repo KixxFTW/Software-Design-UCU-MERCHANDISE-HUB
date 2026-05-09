@@ -257,7 +257,11 @@
             background-color: white;
             background-size: cover;
         }
-        
+
+        html, body {
+            overflow-x: hidden;
+        }
+
         .container {
             display: flex;
             min-height: 100vh;
@@ -793,6 +797,7 @@
             white-space: nowrap;
             word-wrap: normal;
             direction: ltr;
+            font-feature-settings: 'liga';
             -webkit-font-feature-settings: 'liga';
             -webkit-font-smoothing: antialiased;
         }

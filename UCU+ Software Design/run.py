@@ -1620,7 +1620,7 @@ def instructor_payment():
                    p.status, p.payment_date
             FROM payments p
             WHERE p.email = %s
-            ORDER BY p.payment_date DESC
+            ORDER BY p.payment_date DESC, p.id DESC
         """
         cursor.execute(query, (instructor_email,))
         payments = cursor.fetchall()
@@ -2083,7 +2083,9 @@ def admin_dashboard():
             SELECT
                 o.id,
                 o.total_amount,
-                LOWER(o.status) AS status,
+                o.status,
+                o.payment_status,
+                o.payment_method,
                 o.created_at,
                 COALESCE(s.first_name, '') AS first_name,
                 COALESCE(s.last_name, o.student_id) AS last_name
@@ -2967,4 +2969,4 @@ def _ensure_schema():
 _ensure_schema()
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+    app.run(debug=True, port=5000, host='192.168.1.59')

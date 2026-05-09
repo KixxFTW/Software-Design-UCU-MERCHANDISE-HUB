@@ -656,6 +656,151 @@
         align-items: center;
         justify-content: center;
     }
+
+    /* Mobile Responsiveness */
+    html, body {
+        overflow-x: hidden;
+    }
+
+    @media (max-width: 768px) {
+        body {
+            padding: 10px;
+            align-items: flex-start;
+        }
+
+        .signup-as {
+            padding: 28px 18px;
+            width: 100%;
+            max-width: 100%;
+            border-radius: 18px;
+        }
+
+        .signup-as h2 {
+            font-size: 24px;
+        }
+
+        .signup-as h2:after {
+            width: 40px;
+            height: 3px;
+        }
+
+        .signup-as ul {
+            padding: 30px 0 10px 0;
+            gap: 20px;
+        }
+
+        .signup-as li a {
+            width: 130px;
+            height: 130px;
+            border-radius: 16px;
+        }
+
+        .user-icon {
+            width: 44px;
+            height: 44px;
+        }
+
+        .signup-as li span {
+            font-size: 14px;
+            padding-top: 8px;
+        }
+
+        .tab {
+            padding: 10px 24px;
+            font-size: 15px;
+        }
+
+        .form-container {
+            padding: 20px;
+            max-width: 100%;
+        }
+
+        .form-container h3 {
+            font-size: 18px;
+            margin-bottom: 20px;
+        }
+
+        /* Single column grids on mobile */
+        #student-form,
+        #educator-form {
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+        }
+
+        #student-form .form-group,
+        #educator-form .form-group,
+        #student-form button.form-submit,
+        #educator-form button.form-submit,
+        #student-form + .back-button,
+        #educator-form + .back-button {
+            grid-column: auto;
+            width: 100%;
+        }
+
+        .form-group label {
+            font-size: 12px;
+        }
+
+        .form-group input {
+            padding: 11px 14px;
+            font-size: 14px;
+        }
+
+        .form-submit {
+            padding: 13px 28px;
+            font-size: 14px;
+            width: 100%;
+        }
+
+        .back-button {
+            font-size: 13px;
+            padding: 9px 20px;
+        }
+
+        .login-redirect {
+            font-size: 13px;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .signup-as {
+            padding: 22px 14px;
+            border-radius: 14px;
+        }
+
+        .signup-as h2 {
+            font-size: 20px;
+        }
+
+        .signup-as ul {
+            gap: 14px;
+        }
+
+        .signup-as li a {
+            width: 110px;
+            height: 110px;
+            border-radius: 14px;
+        }
+
+        .user-icon {
+            width: 38px;
+            height: 38px;
+        }
+
+        .signup-as li span {
+            font-size: 13px;
+        }
+
+        .form-container {
+            padding: 16px;
+            border-radius: 14px;
+        }
+
+        .form-group {
+            margin-bottom: 14px;
+        }
+    }
     </style>
     <script>
         function switchTab(tabName) {
