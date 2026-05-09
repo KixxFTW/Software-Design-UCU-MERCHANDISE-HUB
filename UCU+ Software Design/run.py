@@ -1,13 +1,8 @@
 from flask import Flask, request, redirect, render_template, flash, session, jsonify, url_for, send_from_directory, get_flashed_messages
-import psycopg2
-from psycopg2.extras import RealDictCursor
+import mysql.connector
 import bcrypt
 import os
 import requests
-
-# Load environment variables from .env file for local development
-from dotenv import load_dotenv
-load_dotenv()
 
 # Allow OAuth over HTTP for local development only.
 # (OAuthlib otherwise requires HTTPS and raises (insecure_transport).)
@@ -24,18 +19,16 @@ from email.mime.text import MIMEText
 
 # Initialize Flask app
 app = Flask(__name__)
-app.secret_key = os.getenv('SECRET_KEY', 'Admin')  # Required for session and flash messages
+app.secret_key = 'Admin'  # Required for session and flash messages
 
 os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
 
-# Database configuration — Supabase PostgreSQL
+# Database configuration
 DB_CONFIG = {
-    'host': os.getenv('POSTGRES_HOST', 'db.rvbmzkxqvwjjzjhejvhf.supabase.co'),
-    'port': int(os.getenv('POSTGRES_PORT', '5432')),
-    'user': os.getenv('POSTGRES_USER', 'postgres'),
-    'password': os.getenv('POSTGRES_PASSWORD', 'boF98kmXXKVHAiu8'),
-    'dbname': os.getenv('POSTGRES_DATABASE', 'postgres'),
-    'sslmode': 'require'
+    'host': '127.0.0.1',
+    'user': 'root',
+    'password': 'Admin',
+    'database': 'usersdb'
 }
 
 # Google OAuth2 configuration
@@ -104,8 +97,8 @@ def _merch_category_column(cursor) -> str:
     Your project has mixed usage of `category` vs misspelled `catergory`.
     Detect which column exists in the running DB.
     """
-    cursor.execute("SELECT column_name FROM information_schema.columns WHERE table_catalog = current_database() AND table_name = 'merchandise'")
-    cols = {row["column_name"] for row in cursor.fetchall()}
+    cursor.execute("SHOW COLUMNS FROM merchandise")
+    cols = {row["Field"] if isinstance(row, dict) else row[0] for row in cursor.fetchall()}
     if "catergory" in cols:
         return "catergory"
     return "category"
@@ -132,8 +125,8 @@ def _handle_instructor_google_oauth(user_info: dict):
     conn = None
     cursor = None
     try:
-        conn = psycopg2.connect(**DB_CONFIG)
-        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        conn = mysql.connector.connect(**DB_CONFIG)
+        cursor = conn.cursor(dictionary=True)
         cursor.execute("SELECT * FROM educators WHERE LOWER(email) = %s", (email,))
         instructor = cursor.fetchone()
         if not instructor:
@@ -160,7 +153,7 @@ def _handle_instructor_google_oauth(user_info: dict):
     finally:
         if cursor:
             cursor.close()
-        if conn:
+        if conn and conn.is_connected():
             conn.close()
 
 @app.route('/api/merchandise', methods=['GET'])
@@ -168,8 +161,8 @@ def api_get_merchandise():
     conn = None
     cursor = None
     try:
-        conn = psycopg2.connect(**DB_CONFIG)
-        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        conn = mysql.connector.connect(**DB_CONFIG)
+        cursor = conn.cursor(dictionary=True)
         category_col = _merch_category_column(cursor)
         cursor.execute(
             f"""
@@ -205,7 +198,7 @@ def api_get_merchandise():
     finally:
         if cursor:
             cursor.close()
-        if conn:
+        if conn and conn.is_connected():
             conn.close()
 
 @app.route('/api/products/<int:product_id>', methods=['GET'])
@@ -217,8 +210,8 @@ def api_get_product(product_id: int):
     conn = None
     cursor = None
     try:
-        conn = psycopg2.connect(**DB_CONFIG)
-        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        conn = mysql.connector.connect(**DB_CONFIG)
+        cursor = conn.cursor(dictionary=True)
         category_col = _merch_category_column(cursor)
         cursor.execute(
             f"""
@@ -244,7 +237,7 @@ def api_get_product(product_id: int):
     finally:
         if cursor:
             cursor.close()
-        if conn:
+        if conn and conn.is_connected():
             conn.close()
 
 @app.route('/api/orders/<int:order_id>', methods=['GET'])
@@ -255,8 +248,8 @@ def api_get_order(order_id: int):
     conn = None
     cursor = None
     try:
-        conn = psycopg2.connect(**DB_CONFIG)
-        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        conn = mysql.connector.connect(**DB_CONFIG)
+        cursor = conn.cursor(dictionary=True)
         cursor.execute(
             """
             SELECT
@@ -301,7 +294,7 @@ def api_get_order(order_id: int):
     finally:
         if cursor:
             cursor.close()
-        if conn:
+        if conn and conn.is_connected():
             conn.close()
 
 @app.route('/api/orders/<int:order_id>/status', methods=['POST'])
@@ -319,8 +312,8 @@ def api_update_order_status(order_id: int):
     conn = None
     cursor = None
     try:
-        conn = psycopg2.connect(**DB_CONFIG)
-        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        conn = mysql.connector.connect(**DB_CONFIG)
+        cursor = conn.cursor(dictionary=True)
         cursor.execute("UPDATE orders SET status=%s WHERE id=%s", (allowed[new_status], order_id))
 
         # When order is completed, insert into payments table
@@ -345,7 +338,7 @@ def api_update_order_status(order_id: int):
                     """
                     INSERT INTO payments (email, amount, payment_method, reference_number, status, payment_date)
                     VALUES (%s, %s, %s, %s, 'Success', NOW())
-                    ON CONFLICT (email) DO UPDATE SET status='Success', payment_date=NOW(), reference_number=%s
+                    ON DUPLICATE KEY UPDATE status='Success', payment_date=NOW(), reference_number=%s
                     """,
                     (email, amount, payment_method, ref, ref),
                 )
@@ -357,7 +350,7 @@ def api_update_order_status(order_id: int):
     finally:
         if cursor:
             cursor.close()
-        if conn:
+        if conn and conn.is_connected():
             conn.close()
 
 @app.route('/api/orders/<int:order_id>/payment-status', methods=['POST'])
@@ -374,8 +367,8 @@ def api_update_order_payment_status(order_id: int):
     conn = None
     cursor = None
     try:
-        conn = psycopg2.connect(**DB_CONFIG)
-        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        conn = mysql.connector.connect(**DB_CONFIG)
+        cursor = conn.cursor(dictionary=True)
         cursor.execute("UPDATE orders SET payment_status=%s WHERE id=%s", (new_status, order_id))
 
         # If marking as Success, insert into payments table
@@ -400,7 +393,7 @@ def api_update_order_payment_status(order_id: int):
                     """
                     INSERT INTO payments (email, amount, payment_method, reference_number, status, payment_date)
                     VALUES (%s, %s, %s, %s, 'Success', NOW())
-                    ON CONFLICT (email) DO UPDATE SET status='Success', payment_date=NOW()
+                    ON DUPLICATE KEY UPDATE status='Success', payment_date=NOW()
                     """,
                     (email, amount, payment_method, ref),
                 )
@@ -419,7 +412,7 @@ def api_update_order_payment_status(order_id: int):
     finally:
         if cursor:
             cursor.close()
-        if conn:
+        if conn and conn.is_connected():
             conn.close()
 
 @app.route('/api/orders/<int:order_id>/process', methods=['POST'])
@@ -429,7 +422,7 @@ def api_process_order(order_id: int):
     conn = None
     cursor = None
     try:
-        conn = psycopg2.connect(**DB_CONFIG)
+        conn = mysql.connector.connect(**DB_CONFIG)
         cursor = conn.cursor()
         cursor.execute("UPDATE orders SET status='Pending' WHERE id=%s", (order_id,))
         conn.commit()
@@ -439,7 +432,7 @@ def api_process_order(order_id: int):
     finally:
         if cursor:
             cursor.close()
-        if conn:
+        if conn and conn.is_connected():
             conn.close()
 
 @app.route('/api/orders/<int:order_id>/complete', methods=['POST'])
@@ -449,7 +442,7 @@ def api_complete_order(order_id: int):
     conn = None
     cursor = None
     try:
-        conn = psycopg2.connect(**DB_CONFIG)
+        conn = mysql.connector.connect(**DB_CONFIG)
         cursor = conn.cursor()
         cursor.execute("UPDATE orders SET status='Completed' WHERE id=%s", (order_id,))
         conn.commit()
@@ -459,7 +452,7 @@ def api_complete_order(order_id: int):
     finally:
         if cursor:
             cursor.close()
-        if conn:
+        if conn and conn.is_connected():
             conn.close()
 
 @app.route('/api/orders/<int:order_id>/cancel', methods=['POST'])
@@ -469,7 +462,7 @@ def api_cancel_order(order_id: int):
     conn = None
     cursor = None
     try:
-        conn = psycopg2.connect(**DB_CONFIG)
+        conn = mysql.connector.connect(**DB_CONFIG)
         cursor = conn.cursor()
         cursor.execute("UPDATE orders SET status='Cancelled' WHERE id=%s", (order_id,))
         conn.commit()
@@ -479,7 +472,7 @@ def api_cancel_order(order_id: int):
     finally:
         if cursor:
             cursor.close()
-        if conn:
+        if conn and conn.is_connected():
             conn.close()
 
 @app.route('/api/payments/<int:payment_id>', methods=['GET'])
@@ -490,8 +483,8 @@ def api_get_payment(payment_id: int):
     conn = None
     cursor = None
     try:
-        conn = psycopg2.connect(**DB_CONFIG)
-        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        conn = mysql.connector.connect(**DB_CONFIG)
+        cursor = conn.cursor(dictionary=True)
         cursor.execute(
             """
             SELECT
@@ -519,7 +512,7 @@ def api_get_payment(payment_id: int):
     finally:
         if cursor:
             cursor.close()
-        if conn:
+        if conn and conn.is_connected():
             conn.close()
 
 @app.route('/api/payments/<int:payment_id>/status', methods=['POST'])
@@ -536,7 +529,7 @@ def api_update_payment_status(payment_id: int):
     conn = None
     cursor = None
     try:
-        conn = psycopg2.connect(**DB_CONFIG)
+        conn = mysql.connector.connect(**DB_CONFIG)
         cursor = conn.cursor()
         cursor.execute("UPDATE payments SET status=%s WHERE id=%s", (new_status, payment_id))
         conn.commit()
@@ -546,7 +539,7 @@ def api_update_payment_status(payment_id: int):
     finally:
         if cursor:
             cursor.close()
-        if conn:
+        if conn and conn.is_connected():
             conn.close()
 
 @app.route('/api/payments/<int:payment_id>/confirm', methods=['POST'])
@@ -556,7 +549,7 @@ def api_confirm_payment(payment_id: int):
     conn = None
     cursor = None
     try:
-        conn = psycopg2.connect(**DB_CONFIG)
+        conn = mysql.connector.connect(**DB_CONFIG)
         cursor = conn.cursor()
         cursor.execute("UPDATE payments SET status='Success' WHERE id=%s", (payment_id,))
         conn.commit()
@@ -566,7 +559,7 @@ def api_confirm_payment(payment_id: int):
     finally:
         if cursor:
             cursor.close()
-        if conn:
+        if conn and conn.is_connected():
             conn.close()
 
 # ROUTE FOR THE LOGIN PAGE
@@ -596,7 +589,7 @@ def process_signup():
         hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
         
         # Connect to database
-        conn = psycopg2.connect(**DB_CONFIG)
+        conn = mysql.connector.connect(**DB_CONFIG)
         cursor = conn.cursor()
         
         # Insert new user
@@ -607,7 +600,7 @@ def process_signup():
         # After successful signup, before redirecting to login/dashboard:
         generate_and_send_otp(student_id, email)
         return redirect(f'/verify_otp/{student_id}')
-    except psycopg2.Error as err:
+    except mysql.connector.Error as err:
         flash(f"Database error: {err}", 'danger')
         return redirect('/signup')
     except Exception as e:
@@ -646,7 +639,7 @@ def signup_student():
         hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
 
         # Insert into the database
-        conn = psycopg2.connect(**DB_CONFIG)
+        conn = mysql.connector.connect(**DB_CONFIG)
         cursor = conn.cursor()
         query = """
             INSERT INTO students (student_id, first_name, last_name, email, password, course)
@@ -685,7 +678,7 @@ def signup_educator():
         hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
 
         # Connect to the database
-        conn = psycopg2.connect(**DB_CONFIG)
+        conn = mysql.connector.connect(**DB_CONFIG)
         cursor = conn.cursor()
 
         # Insert educator data into the database
@@ -705,7 +698,7 @@ def signup_educator():
     finally:
         if cursor:
             cursor.close()
-        if conn:
+        if conn and conn.is_connected():
             conn.close()
 
 # Route to handle login
@@ -717,8 +710,8 @@ def login():
         password = request.form.get('password')
 
         # Connect to the database
-        conn = psycopg2.connect(**DB_CONFIG)
-        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        conn = mysql.connector.connect(**DB_CONFIG)
+        cursor = conn.cursor(dictionary=True)
 
         # Query the database for the student_id
         query = "SELECT * FROM students WHERE student_id = %s"
@@ -758,7 +751,7 @@ def login():
         else:
             flash('Invalid Student ID or Password. Please try again.', 'danger')
             return redirect('/')
-    except psycopg2.Error as err:
+    except mysql.connector.Error as err:
         flash(f"Database error: {err}", 'danger')
         return redirect('/')
     except Exception as e:
@@ -857,8 +850,8 @@ def google_callback():
             google_id = user_info["sub"]
             
             # Check if user exists in database
-            conn = psycopg2.connect(**DB_CONFIG)
-            cursor = conn.cursor(cursor_factory=RealDictCursor)
+            conn = mysql.connector.connect(**DB_CONFIG)
+            cursor = conn.cursor(dictionary=True)
             query = "SELECT * FROM students WHERE email = %s"
             cursor.execute(query, (email,))
             user = cursor.fetchone()
@@ -977,8 +970,8 @@ def google_api_callback():
     user_info = response.json()
     
     # Check if user exists in database
-    conn = psycopg2.connect(**DB_CONFIG)
-    cursor = conn.cursor(cursor_factory=RealDictCursor)
+    conn = mysql.connector.connect(**DB_CONFIG)
+    cursor = conn.cursor(dictionary=True)
     query = "SELECT * FROM students WHERE email = %s"
     cursor.execute(query, (user_info.get('email'),))
     user = cursor.fetchone()
@@ -1059,8 +1052,8 @@ def instructor_dashboard():
         cursor = None
         merchandise = []
         try:
-            conn = psycopg2.connect(**DB_CONFIG)
-            cursor = conn.cursor(cursor_factory=RealDictCursor)
+            conn = mysql.connector.connect(**DB_CONFIG)
+            cursor = conn.cursor(dictionary=True)
             category_col = _merch_category_column(cursor)
             cursor.execute(
                 f"""
@@ -1079,7 +1072,7 @@ def instructor_dashboard():
         finally:
             if cursor:
                 cursor.close()
-            if conn:
+            if conn and conn.is_connected():
                 conn.close()
 
         return render_template(
@@ -1129,8 +1122,8 @@ def settings():
 
     try:
         # Connect to the database
-        conn = psycopg2.connect(**DB_CONFIG)
-        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        conn = mysql.connector.connect(**DB_CONFIG)
+        cursor = conn.cursor(dictionary=True)
 
         # Fetch user information
         query = "SELECT * FROM students WHERE student_id = %s"
@@ -1167,7 +1160,7 @@ def settings():
             message=request.args.get('message'),
             message_type=request.args.get('message_type', 'info')
         )
-    except psycopg2.Error as err:
+    except mysql.connector.Error as err:
         flash(f"Database error: {err}", 'danger')
         return redirect('/settings')  # Use lowercase
     except Exception as e:
@@ -1176,7 +1169,7 @@ def settings():
     finally:
         if 'cursor' in locals():
             cursor.close()
-        if 'conn' in locals() and conn:
+        if 'conn' in locals() and conn.is_connected():
             conn.close()
 
 
@@ -1191,7 +1184,7 @@ def update_profile():
         password = request.form.get('password')
 
         # Connect to the database
-        conn = psycopg2.connect(**DB_CONFIG)
+        conn = mysql.connector.connect(**DB_CONFIG)
         cursor = conn.cursor()
 
         # Update user information
@@ -1227,7 +1220,7 @@ def update_profile():
         session['email'] = email
 
         return redirect('/settings')
-    except psycopg2.Error as err:
+    except mysql.connector.Error as err:
         flash(f"Database error: {err}", 'danger')
         return redirect('/settings')
     except Exception as e:
@@ -1260,8 +1253,8 @@ def update_password():
             return redirect('/settings')
 
         # Connect to the database
-        conn = psycopg2.connect(**DB_CONFIG)
-        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        conn = mysql.connector.connect(**DB_CONFIG)
+        cursor = conn.cursor(dictionary=True)
 
         # Get user's current password
         if 'is_instructor' in session and session['is_instructor']:
@@ -1301,7 +1294,7 @@ def update_password():
         return redirect('/settings')
         return redirect('/settings')
 
-    except psycopg2.Error as err:
+    except mysql.connector.Error as err:
         flash(f"Database error: {err}", 'danger')
         return redirect('/settings')
     except Exception as e:
@@ -1310,7 +1303,7 @@ def update_password():
     finally:
         if 'cursor' in locals():
             cursor.close()
-        if 'conn' in locals() and conn:
+        if 'conn' in locals() and conn.is_connected():
             conn.close()
 
 #Instructor App route
@@ -1326,8 +1319,8 @@ def instructor_login():
             return redirect('/')
 
         # Connect to the database
-        conn = psycopg2.connect(**DB_CONFIG)
-        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        conn = mysql.connector.connect(**DB_CONFIG)
+        cursor = conn.cursor(dictionary=True)
 
         # Fetch instructor by email
         query = "SELECT * FROM educators WHERE email = %s"
@@ -1368,7 +1361,7 @@ def instructor_login():
             flash('Error verifying password. Please try again.', 'danger')
             return redirect('/')
 
-    except psycopg2.Error as err:
+    except mysql.connector.Error as err:
         flash(f"Database error: {err}", 'danger')
         return redirect('/')
     except Exception as e:
@@ -1377,7 +1370,7 @@ def instructor_login():
     finally:
         if 'cursor' in locals():
             cursor.close()
-        if 'conn' in locals() and conn:
+        if 'conn' in locals() and conn.is_connected():
             conn.close()
 
 @app.route('/update_notifications', methods=['POST'])
@@ -1388,7 +1381,7 @@ def update_notifications():
         sms_notifications = request.form.get('sms_notifications') == 'on'
 
         # Connect to the database
-        conn = psycopg2.connect(**DB_CONFIG)
+        conn = mysql.connector.connect(**DB_CONFIG)
         cursor = conn.cursor()
 
         # Check if notification preferences exist
@@ -1415,7 +1408,7 @@ def update_notifications():
         conn.commit()
         flash('Notification preferences updated successfully!', 'success')
         return redirect('/settings')
-    except psycopg2.Error as err:
+    except mysql.connector.Error as err:
         flash(f"Database error: {err}", 'danger')
         return redirect('/settings')
     except Exception as e:
@@ -1435,8 +1428,8 @@ def deactivate_account():
         reason = request.form.get('reason', '')
 
         # Connect to the database
-        conn = psycopg2.connect(**DB_CONFIG)
-        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        conn = mysql.connector.connect(**DB_CONFIG)
+        cursor = conn.cursor(dictionary=True)
 
         # Verify password
         query = "SELECT password FROM students WHERE student_id = %s"
@@ -1460,7 +1453,7 @@ def deactivate_account():
         session.clear()
         flash('Your account has been deactivated. Contact the administrator to reactivate it.', 'success')
         return redirect('/')
-    except psycopg2.Error as err:
+    except mysql.connector.Error as err:
         flash(f"Database error: {err}", 'danger')
         return redirect('/settings')
     except Exception as e:
@@ -1484,8 +1477,8 @@ def delete_account():
             return redirect('/settings')
 
         # Connect to the database
-        conn = psycopg2.connect(**DB_CONFIG)
-        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        conn = mysql.connector.connect(**DB_CONFIG)
+        cursor = conn.cursor(dictionary=True)
 
         # Verify password
         query = "SELECT password FROM students WHERE student_id = %s"
@@ -1508,7 +1501,7 @@ def delete_account():
         for query in queries:
             try:
                 cursor.execute(query, (session.get('student_id'),))
-            except psycopg2.Error as err:
+            except mysql.connector.Error as err:
                 # Log the error but continue with deletion
                 print(f"Error executing query {query}: {err}")
                 continue
@@ -1519,7 +1512,7 @@ def delete_account():
         session.clear()
         flash('Your account and all associated data have been permanently deleted.', 'success')
         return redirect('/')
-    except psycopg2.Error as err:
+    except mysql.connector.Error as err:
         flash(f"Database error: {err}", 'danger')
         return redirect('/settings')
     except Exception as e:
@@ -1543,8 +1536,8 @@ def instructor_settings():
             confirm_password = request.form['confirm_password']
             
             # Connect to database
-            conn = psycopg2.connect(**DB_CONFIG)
-            cursor = conn.cursor(cursor_factory=RealDictCursor)
+            conn = mysql.connector.connect(**DB_CONFIG)
+            cursor = conn.cursor(dictionary=True)
             
             try:
                 # Verify current password
@@ -1598,8 +1591,8 @@ def instructor_payment():
         instructor_email = session.get('email')
         
         # Connect to database
-        conn = psycopg2.connect(**DB_CONFIG)
-        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        conn = mysql.connector.connect(**DB_CONFIG)
+        cursor = conn.cursor(dictionary=True)
         
         if request.method == 'POST':
             # Handle payment processing
@@ -1666,8 +1659,8 @@ def add_to_cart():
         quantity = data.get('quantity', 1)
         size = data.get('size')
         
-        conn = psycopg2.connect(**DB_CONFIG)
-        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        conn = mysql.connector.connect(**DB_CONFIG)
+        cursor = conn.cursor(dictionary=True)
         
         # Try to get item by ID first, then by name if ID fails
         cursor.execute("SELECT * FROM merchandise WHERE id = %s", (item_identifier,))
@@ -1687,13 +1680,13 @@ def add_to_cart():
             cursor.execute("""
                 INSERT INTO cart_items (student_id, item_id, quantity)
                 VALUES (%s, %s, %s)
-                ON CONFLICT (student_id, item_id) DO UPDATE SET quantity = cart_items.quantity + %s
+                ON DUPLICATE KEY UPDATE quantity = quantity + %s
             """, (user_id, item_db_id, quantity, quantity))
         else:
             cursor.execute("""
                 INSERT INTO cart_items (instructor_id, item_id, quantity)
                 VALUES (%s, %s, %s)
-                ON CONFLICT (instructor_id, item_id) DO UPDATE SET quantity = cart_items.quantity + %s
+                ON DUPLICATE KEY UPDATE quantity = quantity + %s
             """, (user_id, item_db_id, quantity, quantity))
         
         conn.commit()
@@ -1727,7 +1720,7 @@ def remove_from_cart():
         data = request.get_json()
         item_id = data.get('item_id')
         
-        conn = psycopg2.connect(**DB_CONFIG)
+        conn = mysql.connector.connect(**DB_CONFIG)
         cursor = conn.cursor()
         
         # Delete from cart using appropriate column
@@ -1771,7 +1764,7 @@ def update_cart_quantity():
         if quantity < 1:
             return jsonify({'error': 'Quantity must be at least 1'}), 400
         
-        conn = psycopg2.connect(**DB_CONFIG)
+        conn = mysql.connector.connect(**DB_CONFIG)
         cursor = conn.cursor()
         
         # Update cart using appropriate column
@@ -1810,8 +1803,8 @@ def get_cart():
         return jsonify({'error': 'Please log in to view cart'}), 401
     
     try:
-        conn = psycopg2.connect(**DB_CONFIG)
-        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        conn = mysql.connector.connect(**DB_CONFIG)
+        cursor = conn.cursor(dictionary=True)
         
         # Use appropriate column name based on user type
         if user_type == 'student_id':
@@ -1868,8 +1861,8 @@ def process_order():
         if not all([payment_method, delivery_option, delivery_address]):
             return jsonify({'error': 'Missing required order information'}), 400
 
-        conn = psycopg2.connect(**DB_CONFIG)
-        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        conn = mysql.connector.connect(**DB_CONFIG)
+        cursor = conn.cursor(dictionary=True)
 
         # If frontend didn't send cart_items, load from database cart for this user
         if not isinstance(cart_items, list) or len(cart_items) == 0:
@@ -1927,8 +1920,8 @@ def process_order():
             # Create order.
             # Your local DB schema may include additional NOT NULL columns (e.g., payment_method),
             # so we detect available columns and build the INSERT accordingly.
-            cursor.execute("SELECT column_name FROM information_schema.columns WHERE table_catalog = current_database() AND table_name = 'orders'")
-            order_columns = {col["column_name"] for col in cursor.fetchall()}
+            cursor.execute("SHOW COLUMNS FROM orders")
+            order_columns = {col["Field"] for col in cursor.fetchall()}
 
             insert_cols = []
             insert_vals = []
@@ -1992,7 +1985,17 @@ def process_order():
             
             # Commit transaction
             conn.commit()
-            
+
+            # Clear the user's cart after successful order
+            try:
+                if 'student_id' in session:
+                    cursor.execute("DELETE FROM cart_items WHERE student_id = %s", (buyer_id,))
+                else:
+                    cursor.execute("DELETE FROM cart_items WHERE instructor_id = %s", (buyer_id,))
+                conn.commit()
+            except Exception as cart_err:
+                print(f"[process_order] Cart clear warning: {cart_err}")
+
             return jsonify({
                 'success': True,
                 'message': 'Order processed successfully',
@@ -2027,8 +2030,8 @@ def admin_dashboard():
     
     try:
         # Connect to database
-        conn = psycopg2.connect(**DB_CONFIG)
-        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        conn = mysql.connector.connect(**DB_CONFIG)
+        cursor = conn.cursor(dictionary=True)
         
         # Get student statistics
         cursor.execute("SELECT COUNT(*) as total_students FROM students WHERE course != 'admin'")
@@ -2175,8 +2178,8 @@ def admin_users():
     conn = None
     cursor = None
     try:
-        conn = psycopg2.connect(**DB_CONFIG)
-        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        conn = mysql.connector.connect(**DB_CONFIG)
+        cursor = conn.cursor(dictionary=True)
 
         cursor.execute(
             """
@@ -2223,7 +2226,7 @@ def admin_users():
     finally:
         if cursor:
             cursor.close()
-        if conn:
+        if conn and conn.is_connected():
             conn.close()
 
 @app.route('/admin/orders')
@@ -2235,8 +2238,8 @@ def admin_orders():
     conn = None
     cursor = None
     try:
-        conn = psycopg2.connect(**DB_CONFIG)
-        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        conn = mysql.connector.connect(**DB_CONFIG)
+        cursor = conn.cursor(dictionary=True)
 
         cursor.execute(
             """
@@ -2314,7 +2317,7 @@ def admin_orders():
     finally:
         if cursor:
             cursor.close()
-        if conn:
+        if conn and conn.is_connected():
             conn.close()
 
 @app.route('/admin/payments')
@@ -2326,8 +2329,8 @@ def admin_payments():
     conn = None
     cursor = None
     try:
-        conn = psycopg2.connect(**DB_CONFIG)
-        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        conn = mysql.connector.connect(**DB_CONFIG)
+        cursor = conn.cursor(dictionary=True)
         cursor.execute(
             """
             SELECT
@@ -2364,7 +2367,7 @@ def admin_payments():
     finally:
         if cursor:
             cursor.close()
-        if conn:
+        if conn and conn.is_connected():
             conn.close()
 
 # Admin Product Management Routes
@@ -2401,8 +2404,8 @@ def admin_products():
                 image.save(image_path)
                 image_url = f'/static/uploads/products/{filename}'
 
-            conn = psycopg2.connect(**DB_CONFIG)
-            cursor = conn.cursor(cursor_factory=RealDictCursor)
+            conn = mysql.connector.connect(**DB_CONFIG)
+            cursor = conn.cursor(dictionary=True)
             category_col = _merch_category_column(cursor)
 
             if product_id_raw:
@@ -2447,15 +2450,15 @@ def admin_products():
         finally:
             if cursor:
                 cursor.close()
-            if conn:
+            if conn and conn.is_connected():
                 conn.close()
 
     # GET: dedicated admin products section/page
     conn = None
     cursor = None
     try:
-        conn = psycopg2.connect(**DB_CONFIG)
-        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        conn = mysql.connector.connect(**DB_CONFIG)
+        cursor = conn.cursor(dictionary=True)
         category_col = _merch_category_column(cursor)
         cursor.execute(
             f"""
@@ -2482,7 +2485,7 @@ def admin_products():
     finally:
         if cursor:
             cursor.close()
-        if conn:
+        if conn and conn.is_connected():
             conn.close()
 
 @app.route('/admin/products/<int:product_id>/delete', methods=['POST'])
@@ -2494,7 +2497,7 @@ def admin_delete_product(product_id: int):
     conn = None
     cursor = None
     try:
-        conn = psycopg2.connect(**DB_CONFIG)
+        conn = mysql.connector.connect(**DB_CONFIG)
         cursor = conn.cursor()
         cursor.execute("DELETE FROM merchandise WHERE id=%s", (product_id,))
         conn.commit()
@@ -2506,7 +2509,7 @@ def admin_delete_product(product_id: int):
     finally:
         if cursor:
             cursor.close()
-        if conn:
+        if conn and conn.is_connected():
             conn.close()
 
 @app.route('/forgot_password', methods=['POST'])
@@ -2514,8 +2517,8 @@ def forgot_password():
     identifier = request.form.get('identifier')
 
     # Connect to the database
-    conn = psycopg2.connect(**DB_CONFIG)
-    cursor = conn.cursor(cursor_factory=RealDictCursor)
+    conn = mysql.connector.connect(**DB_CONFIG)
+    cursor = conn.cursor(dictionary=True)
 
     try:
         # Check if the identifier exists in the database
@@ -2529,8 +2532,8 @@ def forgot_password():
             # Save the OTP in the database (for example, in a 'password_resets' table)
             cursor.execute(
                 "INSERT INTO password_resets (user_id, otp) VALUES (%s, %s) "
-                "ON CONFLICT (user_id) DO UPDATE SET otp = EXCLUDED.otp",
-                (user['student_id'], otp)
+                "ON DUPLICATE KEY UPDATE otp = %s",
+                (user['student_id'], otp, otp)
             )
             conn.commit()
 
@@ -2543,7 +2546,7 @@ def forgot_password():
         else:
             flash('No account found with the provided information.', 'danger')
 
-    except psycopg2.Error as err:
+    except mysql.connector.Error as err:
         flash(f"Database error: {err}", 'danger')
     except Exception as e:
         flash(f"An error occurred: {e}", 'danger')
@@ -2565,8 +2568,8 @@ def reset_password(user_id):
             return redirect(f'/reset_password/{user_id}')
 
         # Verify the OTP
-        conn = psycopg2.connect(**DB_CONFIG)
-        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        conn = mysql.connector.connect(**DB_CONFIG)
+        cursor = conn.cursor(dictionary=True)
 
         try:
             cursor.execute("SELECT * FROM password_resets WHERE user_id = %s AND otp = %s",
@@ -2591,7 +2594,7 @@ def reset_password(user_id):
             else:
                 flash('Invalid or expired OTP.', 'danger')
                 return redirect(f'/reset_password/{user_id}')
-        except psycopg2.Error as err:
+        except mysql.connector.Error as err:
             flash(f"Database error: {err}", 'danger')
         except Exception as e:
             flash(f"An error occurred: {e}", 'danger')
@@ -2604,12 +2607,12 @@ def reset_password(user_id):
 def generate_and_send_otp(user_id, email):
     otp = random.randint(100000, 999999)
     # Save OTP in the database (password_resets table or a new table)
-    conn = psycopg2.connect(**DB_CONFIG)
+    conn = mysql.connector.connect(**DB_CONFIG)
     cursor = conn.cursor()
     cursor.execute(
         "INSERT INTO email_otps (user_id, otp) VALUES (%s, %s) "
-        "ON CONFLICT (user_id) DO UPDATE SET otp = EXCLUDED.otp",
-        (user_id, otp)
+        "ON DUPLICATE KEY UPDATE otp = %s",
+        (user_id, otp, otp)
     )
     conn.commit()
     cursor.close()
@@ -2621,8 +2624,8 @@ def generate_and_send_otp(user_id, email):
 def verify_otp(user_id):
     if request.method == 'POST':
         otp = request.form.get('otp')
-        conn = psycopg2.connect(**DB_CONFIG)
-        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        conn = mysql.connector.connect(**DB_CONFIG)
+        cursor = conn.cursor(dictionary=True)
         cursor.execute("SELECT * FROM email_otps WHERE user_id = %s AND otp = %s", (user_id, otp))
         record = cursor.fetchone()
         if record:
@@ -2665,8 +2668,8 @@ def my_purchases():
         first_name = session.get('first_name', 'Student')
         user_initials = ''.join([name[0].upper() for name in first_name.split() if name])
 
-        conn = psycopg2.connect(**DB_CONFIG)
-        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        conn = mysql.connector.connect(**DB_CONFIG)
+        cursor = conn.cursor(dictionary=True)
 
         # Show purchases for this student (orders + order_items + merchandise).
         query = """
@@ -2720,8 +2723,8 @@ def request_refund(order_id: int):
             flash('Please log in to request a refund.', 'warning')
             return redirect(url_for('index'))
 
-        conn = psycopg2.connect(**DB_CONFIG)
-        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        conn = mysql.connector.connect(**DB_CONFIG)
+        cursor = conn.cursor(dictionary=True)
 
         # Ensure the order belongs to this student
         cursor.execute(
@@ -2766,8 +2769,8 @@ def instructor_my_purchases():
         instructor_email = session.get('email')
         
         # Connect to database
-        conn = psycopg2.connect(**DB_CONFIG)
-        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        conn = mysql.connector.connect(**DB_CONFIG)
+        cursor = conn.cursor(dictionary=True)
         
         # Query orders table for instructor purchases (process_order stores here)
         query = """
@@ -2902,21 +2905,21 @@ def _ensure_schema():
     conn = None
     cursor = None
     try:
-        conn = psycopg2.connect(**DB_CONFIG)
+        conn = mysql.connector.connect(**DB_CONFIG)
         cursor = conn.cursor()
 
         # Ensure cart_items table exists with both student_id and instructor_id
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS cart_items (
-                id SERIAL PRIMARY KEY,
+                id INT AUTO_INCREMENT PRIMARY KEY,
                 student_id VARCHAR(50) NULL,
                 instructor_id INT NULL,
                 item_id INT NOT NULL,
                 quantity INT NOT NULL DEFAULT 1,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                UNIQUE (student_id, item_id),
-                UNIQUE (instructor_id, item_id),
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                UNIQUE KEY uq_cart_student_item (student_id, item_id),
+                UNIQUE KEY uq_cart_instructor_item (instructor_id, item_id),
                 FOREIGN KEY (item_id) REFERENCES merchandise(id) ON DELETE CASCADE
             )
         """)
@@ -2924,37 +2927,34 @@ def _ensure_schema():
         # If table already existed without instructor_id, add it
         cursor.execute("""
             SELECT COUNT(*) FROM information_schema.columns
-            WHERE table_schema = 'public'
+            WHERE table_schema = DATABASE()
               AND table_name = 'cart_items'
               AND column_name = 'instructor_id'
         """)
         if cursor.fetchone()[0] == 0:
             cursor.execute("""
                 ALTER TABLE cart_items
-                ADD COLUMN instructor_id INT NULL
-            """)
-            cursor.execute("""
-                ALTER TABLE cart_items
-                ADD UNIQUE (instructor_id, item_id)
+                ADD COLUMN instructor_id INT NULL AFTER student_id,
+                ADD UNIQUE KEY uq_cart_instructor_item (instructor_id, item_id)
             """)
 
         # Ensure orders table can store instructor purchases
         cursor.execute("""
             SELECT COUNT(*) FROM information_schema.columns
-            WHERE table_schema = 'public'
+            WHERE table_schema = DATABASE()
               AND table_name = 'orders'
               AND column_name = 'instructor_id'
         """)
         if cursor.fetchone()[0] == 0:
             cursor.execute("""
                 ALTER TABLE orders
-                ADD COLUMN instructor_id INT NULL
+                ADD COLUMN instructor_id INT NULL AFTER student_id
             """)
 
         # Make student_id nullable so instructors can place orders without it
         cursor.execute("""
             SELECT is_nullable FROM information_schema.columns
-            WHERE table_schema = 'public'
+            WHERE table_schema = DATABASE()
               AND table_name = 'orders'
               AND column_name = 'student_id'
         """)
@@ -2962,7 +2962,7 @@ def _ensure_schema():
         if row and row[0] == 'NO':
             cursor.execute("""
                 ALTER TABLE orders
-                ALTER COLUMN student_id DROP NOT NULL
+                MODIFY COLUMN student_id VARCHAR(50) NULL
             """)
 
         conn.commit()
@@ -2971,7 +2971,7 @@ def _ensure_schema():
     finally:
         if cursor:
             cursor.close()
-        if conn:
+        if conn and conn.is_connected():
             conn.close()
 
 
