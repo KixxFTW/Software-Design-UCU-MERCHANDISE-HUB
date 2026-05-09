@@ -62,26 +62,39 @@
                             </span>
                         </div>
 
-                        <!-- Product Image & Info -->
                         <div class="product-section">
-                            <div class="product-image">
-                                <img src="{{ purchase.image_url or url_for('static', filename='images/UCULOGO.png') }}" 
-                                     alt="{{ purchase.item_name|default('Product') }}">
+                            <div class="product-images">
+                                {% for item in purchase.order_items %}
+                                <div class="product-image">
+                                    <img src="{{ item.image_url or url_for('static', filename='images/UCULOGO.png') }}"
+                                         alt="{{ item.name }}">
+                                </div>
+                                {% else %}
+                                <div class="product-image">
+                                    <img src="{{ url_for('static', filename='images/UCULOGO.png') }}"
+                                         alt="Product">
+                                </div>
+                                {% endfor %}
                             </div>
                             <div class="product-details">
-                                <h3>{{ purchase.item_name|default('N/A') }}</h3>
-                                <div class="quantity-price">
-                                    <span class="quantity"><i class="material-icons">shopping_bag</i> Qty: {{ purchase.quantity|default(0) }}</span>
-                                    <span class="unit-price">₱{{ "%.2f"|format(purchase.price|default(0)) }} each</span>
+                                {% for item in purchase.order_items %}
+                                <div class="item-row">
+                                    <h3>{{ item.name }}</h3>
+                                    <div class="quantity-price">
+                                        <span class="quantity"><i class="material-icons">shopping_bag</i> Qty: {{ item.quantity }}</span>
+                                        <span class="unit-price">₱{{ "%.2f"|format(item.price) }} each</span>
+                                    </div>
                                 </div>
+                                {% else %}
+                                <div class="item-row">
+                                    <h3>Order #{{ purchase.order_id }}</h3>
+                                    <span class="unit-price">Product details retained</span>
+                                </div>
+                                {% endfor %}
                             </div>
                         </div>
 
                         <div class="amount-section">
-                            <div class="amount-row">
-                                <span class="label">Subtotal:</span>
-                                <span class="value">₱{{ "%.2f"|format((purchase.price|default(0)) * (purchase.quantity|default(0))) }}</span>
-                            </div>
                             <div class="amount-row total">
                                 <span class="label">Total Amount:</span>
                                 <span class="value">₱{{ "%.2f"|format(purchase.total_amount|default(0)) }}</span>
@@ -380,6 +393,13 @@
             background: var(--light);
         }
 
+        .product-images {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            flex-shrink: 0;
+        }
+
         .product-image {
             width: 120px;
             height: 120px;
@@ -395,6 +415,14 @@
             height: 100%;
             object-fit: cover;
             transition: transform 0.3s ease;
+        }
+
+        .item-row {
+            margin-bottom: 12px;
+        }
+
+        .item-row:last-child {
+            margin-bottom: 0;
         }
 
         .product-details {

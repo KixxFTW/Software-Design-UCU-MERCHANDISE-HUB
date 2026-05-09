@@ -57,35 +57,55 @@
                         <!-- Order Header -->
                         <div class="order-header">
                             <div class="order-number">
-                                <span class="badge">Order #{{ purchase.order_id }}</span>
-                                <span class="order-date">{{ purchase.created_at|default('N/A') }}</span>
+                                <span class="badge">
+                                    {% if purchase.order_items %}
+                                        {{ purchase.order_items[0].name }}{% if purchase.order_items|length > 1 %} +{{ purchase.order_items|length - 1 }} more{% endif %}
+                                    {% else %}
+                                        Order #{{ purchase.order_id }}
+                                    {% endif %}
+                                </span>
+                                <span class="order-date">{{ purchase.created_at|default('N/A') }} · Order #{{ purchase.order_id }}</span>
                             </div>
                             <span class="status-badge {% if purchase.status|lower == 'completed' %}status-completed{% elif purchase.status|lower == 'processing' %}status-processing{% else %}status-pending{% endif %}">
                                 {{ purchase.status|default('Pending')|title }}
                             </span>
                         </div>
 
-                        <!-- Product Image & Info -->
+                        <!-- Product Images & Info -->
                         <div class="product-section">
-                            <div class="product-image">
-                                <img src="{{ purchase.image_url or url_for('static', filename='images/UCULOGO.png') }}" 
-                                     alt="{{ purchase.item_name|default('Product') }}">
+                            <div class="product-images">
+                                {% for item in purchase.order_items %}
+                                <div class="product-image">
+                                    <img src="{{ item.image_url or url_for('static', filename='images/UCULOGO.png') }}"
+                                         alt="{{ item.name }}">
+                                </div>
+                                {% else %}
+                                <div class="product-image">
+                                    <img src="{{ purchase.image_url or url_for('static', filename='images/UCULOGO.png') }}"
+                                         alt="{{ purchase.order_items[0].name if purchase.order_items else 'Product' }}">
+                                </div>
+                                {% endfor %}
                             </div>
                             <div class="product-details">
-                                <h3>{{ purchase.item_name|default('N/A') }}</h3>
-                                <div class="quantity-price">
-                                    <span class="quantity"><i class="material-icons">shopping_bag</i> Qty: {{ purchase.quantity|default(0) }}</span>
-                                    <span class="unit-price">₱{{ "%.2f"|format(purchase.price|default(0)) }} each</span>
+                                {% for item in purchase.order_items %}
+                                <div class="item-row">
+                                    <h3>{{ item.name }}</h3>
+                                    <div class="quantity-price">
+                                        <span class="quantity"><i class="material-icons">shopping_bag</i> Qty: {{ item.quantity }}</span>
+                                        <span class="unit-price">₱{{ "%.2f"|format(item.price) }} each</span>
+                                    </div>
                                 </div>
+                                {% else %}
+                                <div class="item-row">
+                                    <h3>{{ purchase.order_items[0].name if purchase.order_items else 'Order #' ~ purchase.order_id }}</h3>
+                                    <span class="unit-price">Product details retained</span>
+                                </div>
+                                {% endfor %}
                             </div>
                         </div>
 
                         <!-- Amount Section -->
                         <div class="amount-section">
-                            <div class="amount-row">
-                                <span class="label">Subtotal:</span>
-                                <span class="value">₱{{ "%.2f"|format((purchase.price|default(0)) * (purchase.quantity|default(0))) }}</span>
-                            </div>
                             <div class="amount-row total">
                                 <span class="label">Total Amount:</span>
                                 <span class="value">₱{{ "%.2f"|format(purchase.total_amount|default(0)) }}</span>
@@ -410,6 +430,21 @@
             gap: 20px;
             padding: 20px;
             background: var(--light);
+        }
+
+        .product-images {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            flex-shrink: 0;
+        }
+
+        .item-row {
+            margin-bottom: 12px;
+        }
+
+        .item-row:last-child {
+            margin-bottom: 0;
         }
 
         .product-image {
