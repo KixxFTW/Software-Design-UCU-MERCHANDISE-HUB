@@ -105,51 +105,29 @@ except ImportError:
 def get_google_provider_cfg():
     return requests.get(GOOGLE_DISCOVERY_URL).json()
 
-# Email sending function (using SendGrid API - works on Vercel without SMTP)
+# Email sending function
 def send_email(to_email, subject, body):
     try:
-        api_key = os.environ.get('SENDGRID_API_KEY')
-        sender_email = os.environ.get('SENDGRID_FROM_EMAIL', 'valdezmarkjethro@gmail.com')
+        # Gmail SMTP settings
+        sender_email = "valdezmarkjethro@gmail.com"  # Your Gmail address
+        sender_password = "tmkd kzuh sqvc uvew"  # Your App Password
+        
+        # Create message
+        msg = MIMEText(body)
+        msg['Subject'] = subject
+        msg['From'] = sender_email
+        msg['To'] = to_email
 
-        if not api_key:
-            err = "SENDGRID_API_KEY environment variable is not set. Sign up at https://sendgrid.com, get your API key, and add it to your environment variables."
-            print(err)
-            return False, err
-
-        import urllib.request
-        import json
-
-        data = json.dumps({
-            "personalizations": [{"to": [{"email": to_email}]}],
-            "from": {"email": sender_email},
-            "subject": subject,
-            "content": [{"type": "text/plain", "value": body}]
-        }).encode('utf-8')
-
-        req = urllib.request.Request(
-            "https://api.sendgrid.com/v3/mail/send",
-            data=data,
-            headers={
-                "Authorization": f"Bearer {api_key}",
-                "Content-Type": "application/json"
-            },
-            method="POST"
-        )
-
-        with urllib.request.urlopen(req) as response:
+        # Connect to Gmail SMTP server
+        with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
+            server.login(sender_email, sender_password)
+            server.sendmail(sender_email, to_email, msg.as_string())
             print(f"Email sent successfully to {to_email}")
-            return True, None
-
-    except urllib.error.HTTPError as e:
-        err_body = e.read().decode()
-        err_msg = f"SendGrid API error ({e.code}): {err_body}"
-        print(err_msg)
-        return False, err_msg
+            return True
+            
     except Exception as e:
-        err_msg = str(e)
-        print(f"Error sending email: {err_msg}")
-        traceback.print_exc()
-        return False, err_msg
+        print(f"Error sending email: {str(e)}")
+        return False
 
 def _is_admin() -> bool:
     # Admin logic in this project is currently based on hardcoded student_id/course.
@@ -682,9 +660,9 @@ def process_signup():
         cursor.execute(query, (student_id, first_name, last_name, email, hashed_password, 'N/A'))
         conn.commit()
         
-        # Redirect to login page after successful signup
-        flash('Account created successfully! Please log in.', 'success')
-        return redirect('/')
+        # After successful signup, before redirecting to login/dashboard:
+        generate_and_send_otp(student_id, email)
+        return redirect(f'/verify_otp/{student_id}')
     except psycopg2.Error as err:
         flash(f"Database error: {err}", 'danger')
         return redirect('/signup')
@@ -2611,43 +2589,29 @@ def forgot_password():
     cursor = conn.cursor()
 
     try:
-        # Check if the identifier exists in the students table
+        # Check if the identifier exists in the database
         cursor.execute("SELECT * FROM students WHERE student_id = %s OR email = %s", (identifier, identifier))
         user = cursor.fetchone()
-        user_type = 'student'
-
-        # If not found in students, check educators
-        if not user:
-            cursor.execute("SELECT * FROM educators WHERE email = %s", (identifier,))
-            user = cursor.fetchone()
-            user_type = 'instructor'
 
         if user:
             # Generate a 6-digit OTP
             otp = random.randint(100000, 999999)
 
-            # Use student_id for students, id for instructors as user_id
-            uid = str(user.get('student_id') or user.get('id'))
-
-            # Save the OTP in the database
-            cursor.execute("SELECT id FROM password_resets WHERE user_id = %s", (uid,))
+            # Save the OTP in the database (for example, in a 'password_resets' table)
+            cursor.execute("SELECT id FROM password_resets WHERE user_id = %s", (user['student_id'],))
             existing = cursor.fetchone()
             if existing:
-                cursor.execute("UPDATE password_resets SET otp = %s WHERE user_id = %s", (otp, uid))
+                cursor.execute("UPDATE password_resets SET otp = %s WHERE user_id = %s", (otp, user['student_id']))
             else:
-                cursor.execute("INSERT INTO password_resets (user_id, email, otp) VALUES (%s, %s, %s)", (uid, user['email'], otp))
+                cursor.execute("INSERT INTO password_resets (user_id, otp) VALUES (%s, %s)", (user['student_id'], otp))
             conn.commit()
 
             # Send the OTP via email
-            email_sent, email_err = send_email(user['email'], "Password Reset OTP",
+            send_email(user['email'], "Password Reset OTP",
                     f"Your OTP for resetting your password is: {otp}")
 
-            if email_sent:
-                flash('An OTP has been sent to your email.', 'success')
-                return redirect(f'/reset_password/{uid}?type={user_type}')
-            else:
-                flash(f'Failed to send OTP email: {email_err}', 'danger')
-                return redirect('/')
+            flash('An OTP has been sent to your email.', 'success')
+            return redirect(f'/reset_password/{user["student_id"]}')
         else:
             flash('No account found with the provided information.', 'danger')
 
@@ -2663,8 +2627,6 @@ def forgot_password():
 
 @app.route('/reset_password/<user_id>', methods=['GET', 'POST'])
 def reset_password(user_id):
-    user_type = request.args.get('type', 'student')
-
     if request.method == 'POST':
         otp = request.form.get('otp')
         new_password = request.form.get('new_password')
@@ -2672,7 +2634,7 @@ def reset_password(user_id):
 
         if new_password != confirm_password:
             flash('Passwords do not match.', 'danger')
-            return redirect(f'/reset_password/{user_id}?type={user_type}')
+            return redirect(f'/reset_password/{user_id}')
 
         # Verify the OTP
         conn = get_db_connection()
@@ -2680,20 +2642,16 @@ def reset_password(user_id):
 
         try:
             cursor.execute("SELECT * FROM password_resets WHERE user_id = %s AND otp = %s",
-                        (str(user_id), otp))
+                        (user_id, otp))
             reset_request = cursor.fetchone()
 
             if reset_request:
                 # Hash the new password
                 hashed_password = bcrypt.hashpw(new_password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
 
-                # Update the correct table based on user type
-                if user_type == 'instructor':
-                    cursor.execute("UPDATE educators SET password = %s WHERE id = %s",
-                                (hashed_password, user_id))
-                else:
-                    cursor.execute("UPDATE students SET password = %s WHERE student_id = %s",
-                                (hashed_password, user_id))
+                # Update the password in the database
+                cursor.execute("UPDATE students SET password = %s WHERE student_id = %s",
+                            (hashed_password, user_id))
                 conn.commit()
 
                 # Delete the reset request after successful password change
@@ -2704,7 +2662,7 @@ def reset_password(user_id):
                 return redirect('/')
             else:
                 flash('Invalid or expired OTP.', 'danger')
-                return redirect(f'/reset_password/{user_id}?type={user_type}')
+                return redirect(f'/reset_password/{user_id}')
         except psycopg2.Error as err:
             flash(f"Database error: {err}", 'danger')
         except Exception as e:
@@ -2713,7 +2671,24 @@ def reset_password(user_id):
             cursor.close()
             conn.close()
 
-    return render_template('ResetPassword.html', user_id=user_id, user_type=user_type)
+    return render_template('ResetPassword.html', user_id=user_id)
+
+def generate_and_send_otp(user_id, email):
+    otp = random.randint(100000, 999999)
+    # Save OTP in the database (password_resets table or a new table)
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT id FROM email_otps WHERE user_id = %s", (user_id,))
+    existing = cursor.fetchone()
+    if existing:
+        cursor.execute("UPDATE email_otps SET otp = %s WHERE user_id = %s", (otp, user_id))
+    else:
+        cursor.execute("INSERT INTO email_otps (user_id, otp) VALUES (%s, %s)", (user_id, otp))
+    conn.commit()
+    cursor.close()
+    conn.close()
+    # Send OTP via email
+    send_email(email, "Your OTP Code", f"Your OTP is: {otp}")
 
 @app.route('/verify_otp/<user_id>', methods=['GET', 'POST'])
 def verify_otp(user_id):
@@ -2721,62 +2696,22 @@ def verify_otp(user_id):
         otp = request.form.get('otp')
         conn = get_db_connection()
         cursor = conn.cursor()
-        
-        try:
-            # Check OTP in password_resets table
-            cursor.execute(
-                """
-                SELECT id, otp FROM password_resets 
-                WHERE user_id = %s AND otp = %s AND used = FALSE 
-                AND expires_at > NOW()
-                """,
-                (user_id, otp)
-            )
-            record = cursor.fetchone()
-            
-            if record:
-                # Mark OTP as used
-                cursor.execute(
-                    "UPDATE password_resets SET used = TRUE WHERE id = %s",
-                    (record['id'],)
-                )
-                conn.commit()
-                
-                # Fetch user details from students table
-                cursor.execute(
-                    "SELECT student_id, first_name, last_name, email FROM students WHERE student_id = %s",
-                    (user_id,)
-                )
-                user = cursor.fetchone()
-                
-                if user:
-                    # Set session for the user
-                    session['student_id'] = user['student_id']
-                    session['first_name'] = user['first_name']
-                    session['last_name'] = user['last_name']
-                    session['email'] = user['email']
-                    session['verified'] = True
-                    flash('OTP verified successfully! You are now logged in.', 'success')
-                    cursor.close()
-                    conn.close()
-                    return redirect('/dashboard')
-                else:
-                    flash('User not found.', 'danger')
-                    cursor.close()
-                    conn.close()
-                    return redirect(f'/verify_otp/{user_id}')
-            else:
-                flash('Invalid or expired OTP. Please try again.', 'danger')
-                cursor.close()
-                conn.close()
-                return redirect(f'/verify_otp/{user_id}')
-        except Exception as e:
-            print(f"Error verifying OTP: {e}")
-            flash('An error occurred while verifying OTP.', 'danger')
+        cursor.execute("SELECT * FROM email_otps WHERE user_id = %s AND otp = %s", (user_id, otp))
+        record = cursor.fetchone()
+        if record:
+            # OTP is correct, delete it and proceed
+            cursor.execute("DELETE FROM email_otps WHERE user_id = %s", (user_id,))
+            conn.commit()
+            cursor.close()
+            conn.close()
+            flash('OTP verified successfully!', 'success')
+            # Log the user in or redirect as needed
+            return redirect('/')
+        else:
+            flash('Invalid OTP. Please try again.', 'danger')
             cursor.close()
             conn.close()
             return redirect(f'/verify_otp/{user_id}')
-    
     return render_template('VerifyOTP.html', user_id=user_id)
 
 @app.route('/features_simple')
@@ -3361,6 +3296,17 @@ def _ensure_schema():
             cursor.execute("""
                 ALTER TABLE password_resets
                 ADD CONSTRAINT uq_password_resets_user_id UNIQUE (user_id)
+            """)
+
+        cursor.execute("""
+            SELECT COUNT(*) AS cnt FROM information_schema.table_constraints
+            WHERE table_schema = 'public' AND table_name = 'email_otps'
+              AND constraint_name = 'uq_email_otps_user_id'
+        """)
+        if cursor.fetchone()["cnt"] == 0:
+            cursor.execute("""
+                ALTER TABLE email_otps
+                ADD CONSTRAINT uq_email_otps_user_id UNIQUE (user_id)
             """)
 
         conn.commit()
