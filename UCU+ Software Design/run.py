@@ -110,7 +110,7 @@ def send_email(to_email, subject, body):
     try:
         # Gmail SMTP settings
         sender_email = "valdezmarkjethro@gmail.com"  # Your Gmail address
-        sender_password = "tmkd kzuh sqvc uvew"  # Your App Password
+        sender_password = "tmkdkzuhsqvcuvew"  # Your App Password (no spaces)
         
         # Create message
         msg = MIMEText(body)
@@ -2617,11 +2617,15 @@ def forgot_password():
             conn.commit()
 
             # Send the OTP via email
-            send_email(user['email'], "Password Reset OTP",
+            email_sent = send_email(user['email'], "Password Reset OTP",
                     f"Your OTP for resetting your password is: {otp}")
 
-            flash('An OTP has been sent to your email.', 'success')
-            return redirect(f'/reset_password/{uid}?type={user_type}')
+            if email_sent:
+                flash('An OTP has been sent to your email.', 'success')
+                return redirect(f'/reset_password/{uid}?type={user_type}')
+            else:
+                flash('Failed to send OTP email. Please try again later.', 'danger')
+                return redirect('/')
         else:
             flash('No account found with the provided information.', 'danger')
 
