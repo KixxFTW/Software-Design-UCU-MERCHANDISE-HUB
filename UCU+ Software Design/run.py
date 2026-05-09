@@ -2150,10 +2150,14 @@ def admin_dashboard():
                 o.payment_status,
                 o.payment_method,
                 o.created_at,
+                o.student_id,
+                o.instructor_id,
                 COALESCE(s.first_name, '') AS first_name,
-                COALESCE(s.last_name, o.student_id) AS last_name
+                COALESCE(s.last_name, o.student_id) AS last_name,
+                COALESCE(e.full_name, '') AS instructor_name
             FROM orders o
             LEFT JOIN students s ON s.student_id = o.student_id
+            LEFT JOIN educators e ON e.id = o.instructor_id
             ORDER BY o.created_at DESC
             LIMIT 10
             """

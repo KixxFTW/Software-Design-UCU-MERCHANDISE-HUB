@@ -244,6 +244,7 @@
                                         <tr>
                                             <th>Order ID</th>
                                             <th>Customer</th>
+                                            <th>Source</th>
                                             <th>Products</th>
                                             <th>Quantity</th>
                                             <th>Amount</th>
@@ -256,7 +257,20 @@
                                         {% for order in recent_orders %}
                                         <tr>
                                             <td>#{{ order.id }}</td>
-                                            <td>{{ order.first_name }} {{ order.last_name }}</td>
+                                            <td>
+                                                {% if order.instructor_id %}
+                                                    {{ order.instructor_name or 'Instructor #' + order.instructor_id|string }}
+                                                {% else %}
+                                                    {{ order.first_name }} {{ order.last_name }}
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if order.instructor_id %}
+                                                    <span class="badge bg-info">Instructor</span>
+                                                {% else %}
+                                                    <span class="badge bg-primary">Student</span>
+                                                {% endif %}
+                                            </td>
                                             <td>
                                                 {% for item in order.order_items %}
                                                 <div>{{ item.product_name }}</div>
@@ -427,6 +441,7 @@
                                         <tr>
                                             <th>Order ID</th>
                                             <th>Customer</th>
+                                            <th>Source</th>
                                             <th>Products</th>
                                             <th>Quantity</th>
                                             <th>Amount</th>
@@ -439,7 +454,20 @@
                                         {% for order in recent_orders %}
                                         <tr>
                                             <td>#{{ order.id }}</td>
-                                            <td>{{ order.first_name }} {{ order.last_name }}</td>
+                                            <td>
+                                                {% if order.instructor_id %}
+                                                    {{ order.instructor_name or 'Instructor #' + order.instructor_id|string }}
+                                                {% else %}
+                                                    {{ order.first_name }} {{ order.last_name }}
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if order.instructor_id %}
+                                                    <span class="badge bg-info">Instructor</span>
+                                                {% else %}
+                                                    <span class="badge bg-primary">Student</span>
+                                                {% endif %}
+                                            </td>
                                             <td>
                                                 {% for item in order.order_items %}
                                                 <div>{{ item.product_name }}</div>
