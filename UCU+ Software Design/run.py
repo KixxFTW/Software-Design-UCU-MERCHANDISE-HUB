@@ -3046,6 +3046,62 @@ def _ensure_schema():
                 ADD COLUMN subject VARCHAR(255) NULL
             """)
 
+        # Ensure unique constraints for ON CONFLICT clauses
+        cursor.execute("""
+            SELECT COUNT(*) AS cnt FROM information_schema.table_constraints
+            WHERE table_schema = 'public' AND table_name = 'payments'
+              AND constraint_name = 'uq_payments_reference_number'
+        """)
+        if cursor.fetchone()["cnt"] == 0:
+            cursor.execute("""
+                ALTER TABLE payments
+                ADD CONSTRAINT uq_payments_reference_number UNIQUE (reference_number)
+            """)
+
+        cursor.execute("""
+            SELECT COUNT(*) AS cnt FROM information_schema.table_constraints
+            WHERE table_schema = 'public' AND table_name = 'cart_items'
+              AND constraint_name = 'uq_cart_student_item'
+        """)
+        if cursor.fetchone()["cnt"] == 0:
+            cursor.execute("""
+                ALTER TABLE cart_items
+                ADD CONSTRAINT uq_cart_student_item UNIQUE (student_id, item_id)
+            """)
+
+        cursor.execute("""
+            SELECT COUNT(*) AS cnt FROM information_schema.table_constraints
+            WHERE table_schema = 'public' AND table_name = 'cart_items'
+              AND constraint_name = 'uq_cart_instructor_item'
+        """)
+        if cursor.fetchone()["cnt"] == 0:
+            cursor.execute("""
+                ALTER TABLE cart_items
+                ADD CONSTRAINT uq_cart_instructor_item UNIQUE (instructor_id, item_id)
+            """)
+
+        cursor.execute("""
+            SELECT COUNT(*) AS cnt FROM information_schema.table_constraints
+            WHERE table_schema = 'public' AND table_name = 'password_resets'
+              AND constraint_name = 'uq_password_resets_user_id'
+        """)
+        if cursor.fetchone()["cnt"] == 0:
+            cursor.execute("""
+                ALTER TABLE password_resets
+                ADD CONSTRAINT uq_password_resets_user_id UNIQUE (user_id)
+            """)
+
+        cursor.execute("""
+            SELECT COUNT(*) AS cnt FROM information_schema.table_constraints
+            WHERE table_schema = 'public' AND table_name = 'email_otps'
+              AND constraint_name = 'uq_email_otps_user_id'
+        """)
+        if cursor.fetchone()["cnt"] == 0:
+            cursor.execute("""
+                ALTER TABLE email_otps
+                ADD CONSTRAINT uq_email_otps_user_id UNIQUE (user_id)
+            """)
+
         conn.commit()
     except Exception as e:
         print(f"Schema migration warning (non-fatal): {e}")
