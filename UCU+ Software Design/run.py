@@ -2965,8 +2965,9 @@ def _ensure_schema():
             conn.close()
 
 
-# Run lightweight schema check once at import time
-_ensure_schema()
+# Run lightweight schema check once at import time (skip on Vercel)
+if not os.environ.get('VERCEL'):
+    _ensure_schema()
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000, host='192.168.1.59')
