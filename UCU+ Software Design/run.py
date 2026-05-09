@@ -17,6 +17,7 @@ import uuid
 import random
 import smtplib
 from email.mime.text import MIMEText
+import traceback
 
 # Load environment variables from .env.local
 try:
@@ -387,6 +388,8 @@ def api_update_order_status(order_id: int):
         conn.commit()
         return jsonify({'success': True, 'status': new_status})
     except Exception as e:
+        print(f"[api_update_order_status] ERROR: {e}")
+        traceback.print_exc()
         return jsonify({'error': str(e)}), 500
     finally:
         if cursor:
@@ -2927,6 +2930,35 @@ def _ensure_schema():
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
+
+        # Ensure orders table exists
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS orders (
+                id SERIAL PRIMARY KEY,
+                student_id VARCHAR(50) NULL,
+                instructor_id INT NULL,
+                total_amount DECIMAL(10,2) DEFAULT 0,
+                payment_method VARCHAR(50) NULL,
+                payment_status VARCHAR(50) DEFAULT 'Pending',
+                status VARCHAR(50) DEFAULT 'Pending',
+                delivery_option VARCHAR(50) NULL,
+                delivery_address TEXT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+
+        # Ensure payments table exists
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS payments (
+                id SERIAL PRIMARY KEY,
+                email VARCHAR(255) NULL,
+                amount DECIMAL(10,2) DEFAULT 0,
+                payment_method VARCHAR(50) NULL,
+                reference_number VARCHAR(255) NULL,
+                status VARCHAR(50) DEFAULT 'Pending',
+                payment_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
 
         # Ensure cart_items table exists with both student_id and instructor_id
         cursor.execute("""
