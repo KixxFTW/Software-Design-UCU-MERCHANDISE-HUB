@@ -2589,21 +2589,31 @@ def forgot_password():
     cursor = conn.cursor()
 
     try:
-        # Check if the identifier exists in the database
+        # Check if the identifier exists in the students table
         cursor.execute("SELECT * FROM students WHERE student_id = %s OR email = %s", (identifier, identifier))
         user = cursor.fetchone()
+        user_type = 'student'
+
+        # If not found in students, check educators
+        if not user:
+            cursor.execute("SELECT * FROM educators WHERE email = %s", (identifier,))
+            user = cursor.fetchone()
+            user_type = 'instructor'
 
         if user:
             # Generate a 6-digit OTP
             otp = random.randint(100000, 999999)
 
-            # Save the OTP in the database (for example, in a 'password_resets' table)
-            cursor.execute("SELECT id FROM password_resets WHERE user_id = %s", (user['student_id'],))
+            # Use student_id for students, id for instructors as user_id
+            uid = user.get('student_id') or user.get('id')
+
+            # Save the OTP in the database
+            cursor.execute("SELECT id FROM password_resets WHERE user_id = %s", (uid,))
             existing = cursor.fetchone()
             if existing:
-                cursor.execute("UPDATE password_resets SET otp = %s WHERE user_id = %s", (otp, user['student_id']))
+                cursor.execute("UPDATE password_resets SET otp = %s WHERE user_id = %s", (otp, uid))
             else:
-                cursor.execute("INSERT INTO password_resets (user_id, email, otp) VALUES (%s, %s, %s)", (user['student_id'], user['email'], otp))
+                cursor.execute("INSERT INTO password_resets (user_id, email, otp) VALUES (%s, %s, %s)", (uid, user['email'], otp))
             conn.commit()
 
             # Send the OTP via email
@@ -2611,7 +2621,7 @@ def forgot_password():
                     f"Your OTP for resetting your password is: {otp}")
 
             flash('An OTP has been sent to your email.', 'success')
-            return redirect(f'/reset_password/{user["student_id"]}')
+            return redirect(f'/reset_password/{uid}?type={user_type}')
         else:
             flash('No account found with the provided information.', 'danger')
 
@@ -2627,6 +2637,8 @@ def forgot_password():
 
 @app.route('/reset_password/<user_id>', methods=['GET', 'POST'])
 def reset_password(user_id):
+    user_type = request.args.get('type', 'student')
+
     if request.method == 'POST':
         otp = request.form.get('otp')
         new_password = request.form.get('new_password')
@@ -2634,7 +2646,7 @@ def reset_password(user_id):
 
         if new_password != confirm_password:
             flash('Passwords do not match.', 'danger')
-            return redirect(f'/reset_password/{user_id}')
+            return redirect(f'/reset_password/{user_id}?type={user_type}')
 
         # Verify the OTP
         conn = get_db_connection()
@@ -2649,9 +2661,13 @@ def reset_password(user_id):
                 # Hash the new password
                 hashed_password = bcrypt.hashpw(new_password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
 
-                # Update the password in the database
-                cursor.execute("UPDATE students SET password = %s WHERE student_id = %s",
-                            (hashed_password, user_id))
+                # Update the correct table based on user type
+                if user_type == 'instructor':
+                    cursor.execute("UPDATE educators SET password = %s WHERE id = %s",
+                                (hashed_password, user_id))
+                else:
+                    cursor.execute("UPDATE students SET password = %s WHERE student_id = %s",
+                                (hashed_password, user_id))
                 conn.commit()
 
                 # Delete the reset request after successful password change
@@ -2662,7 +2678,7 @@ def reset_password(user_id):
                 return redirect('/')
             else:
                 flash('Invalid or expired OTP.', 'danger')
-                return redirect(f'/reset_password/{user_id}')
+                return redirect(f'/reset_password/{user_id}?type={user_type}')
         except psycopg2.Error as err:
             flash(f"Database error: {err}", 'danger')
         except Exception as e:
@@ -2671,7 +2687,7 @@ def reset_password(user_id):
             cursor.close()
             conn.close()
 
-    return render_template('ResetPassword.html', user_id=user_id)
+    return render_template('ResetPassword.html', user_id=user_id, user_type=user_type)
 
 def generate_and_send_otp(user_id, email):
     otp = random.randint(100000, 999999)
