@@ -3008,6 +3008,42 @@ def _ensure_schema():
                 ADD COLUMN full_name VARCHAR(255) NULL
             """)
 
+        cursor.execute("""
+            SELECT COUNT(*) AS cnt FROM information_schema.columns
+            WHERE table_schema = 'public'
+              AND table_name = 'educators'
+              AND column_name = 'password'
+        """)
+        if cursor.fetchone()["cnt"] == 0:
+            cursor.execute("""
+                ALTER TABLE educators
+                ADD COLUMN password VARCHAR(255) NULL
+            """)
+
+        cursor.execute("""
+            SELECT COUNT(*) AS cnt FROM information_schema.columns
+            WHERE table_schema = 'public'
+              AND table_name = 'educators'
+              AND column_name = 'institution'
+        """)
+        if cursor.fetchone()["cnt"] == 0:
+            cursor.execute("""
+                ALTER TABLE educators
+                ADD COLUMN institution VARCHAR(255) NULL
+            """)
+
+        cursor.execute("""
+            SELECT COUNT(*) AS cnt FROM information_schema.columns
+            WHERE table_schema = 'public'
+              AND table_name = 'educators'
+              AND column_name = 'subject'
+        """)
+        if cursor.fetchone()["cnt"] == 0:
+            cursor.execute("""
+                ALTER TABLE educators
+                ADD COLUMN subject VARCHAR(255) NULL
+            """)
+
         conn.commit()
     except Exception as e:
         print(f"Schema migration warning (non-fatal): {e}")
