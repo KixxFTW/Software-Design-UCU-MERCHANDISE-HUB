@@ -110,7 +110,7 @@ def send_email(to_email, subject, body):
     try:
         # Gmail SMTP settings from environment variables
         sender_email = os.environ.get('SMTP_EMAIL', 'valdezmarkjethro@gmail.com')
-        sender_password = os.environ.get('SMTP_PASSWORD')
+        sender_password = os.environ.get('SMTP_PASSWORD', 'nnfprccfjnjmukfs')
 
         if not sender_password:
             err = "SMTP_PASSWORD environment variable is not set. Go to https://myaccount.google.com/apppasswords to generate an App Password, then set it in your environment variables."
