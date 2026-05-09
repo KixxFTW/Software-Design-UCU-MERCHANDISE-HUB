@@ -2716,16 +2716,28 @@ def reset_password(user_id):
     return render_template('ResetPassword.html', user_id=user_id, user_type=user_type)
 
 def generate_and_send_otp(user_id, email):
-    otp = random.randint(100000, 999999)
-    # Save OTP in the database (password_resets table or a new table)
+    otp = str(random.randint(100000, 999999))
+    # Save OTP in the password_resets table
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT id FROM email_otps WHERE user_id = %s", (user_id,))
+    
+    # Check if an existing OTP record exists for this user
+    cursor.execute("SELECT id FROM password_resets WHERE user_id = %s", (user_id,))
     existing = cursor.fetchone()
+    
     if existing:
-        cursor.execute("UPDATE email_otps SET otp = %s WHERE user_id = %s", (otp, user_id))
+        # Update existing record
+        cursor.execute(
+            "UPDATE password_resets SET otp = %s, created_at = CURRENT_TIMESTAMP, expires_at = CURRENT_TIMESTAMP + INTERVAL '10 minutes', used = FALSE WHERE user_id = %s",
+            (otp, user_id)
+        )
     else:
-        cursor.execute("INSERT INTO email_otps (user_id, otp) VALUES (%s, %s)", (user_id, otp))
+        # Insert new record
+        cursor.execute(
+            "INSERT INTO password_resets (user_id, email, otp, expires_at, used) VALUES (%s, %s, %s, CURRENT_TIMESTAMP + INTERVAL '10 minutes', FALSE)",
+            (user_id, email, otp)
+        )
+    
     conn.commit()
     cursor.close()
     conn.close()
@@ -2738,21 +2750,37 @@ def verify_otp(user_id):
         otp = request.form.get('otp')
         conn = get_db_connection()
         cursor = conn.cursor()
-        cursor.execute("SELECT * FROM email_otps WHERE user_id = %s AND otp = %s", (user_id, otp))
+        
+        # Check OTP in password_resets table
+        cursor.execute(
+            """
+            SELECT * FROM password_resets 
+            WHERE user_id = %s AND otp = %s AND used = FALSE 
+            AND expires_at > CURRENT_TIMESTAMP
+            """,
+            (user_id, otp)
+        )
         record = cursor.fetchone()
+        
         if record:
-            # OTP is correct, delete it and proceed
-            cursor.execute("DELETE FROM email_otps WHERE user_id = %s", (user_id,))
+            # OTP is correct, mark it as used
+            cursor.execute(
+                "UPDATE password_resets SET used = TRUE WHERE id = %s",
+                (record['id'],)
+            )
             conn.commit()
             cursor.close()
             conn.close()
-            flash('OTP verified successfully!', 'success')
-            # Log the user in or redirect as needed
-            return redirect('/')
+            
+            # Set session for the user
+            session['student_id'] = user_id
+            session['verified'] = True
+            flash('OTP verified successfully! You are now logged in.', 'success')
+            return redirect('/dashboard')
         else:
-            flash('Invalid OTP. Please try again.', 'danger')
             cursor.close()
             conn.close()
+            flash('Invalid or expired OTP. Please try again.', 'danger')
             return redirect(f'/verify_otp/{user_id}')
     return render_template('VerifyOTP.html', user_id=user_id)
 
@@ -3338,17 +3366,6 @@ def _ensure_schema():
             cursor.execute("""
                 ALTER TABLE password_resets
                 ADD CONSTRAINT uq_password_resets_user_id UNIQUE (user_id)
-            """)
-
-        cursor.execute("""
-            SELECT COUNT(*) AS cnt FROM information_schema.table_constraints
-            WHERE table_schema = 'public' AND table_name = 'email_otps'
-              AND constraint_name = 'uq_email_otps_user_id'
-        """)
-        if cursor.fetchone()["cnt"] == 0:
-            cursor.execute("""
-                ALTER TABLE email_otps
-                ADD CONSTRAINT uq_email_otps_user_id UNIQUE (user_id)
             """)
 
         conn.commit()
