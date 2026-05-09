@@ -537,9 +537,8 @@ def api_get_payment(payment_id: int):
                 p.reference_number,
                 p.status,
                 p.payment_date,
-                COALESCE(e.full_name, p.email) AS instructor_name
+                p.email AS instructor_name
             FROM payments p
-            LEFT JOIN educators e ON e.email = p.email
             WHERE p.id = %s
             """,
             (payment_id,),
@@ -2154,9 +2153,8 @@ def admin_dashboard():
                 p.reference_number,
                 p.status,
                 p.payment_date,
-                COALESCE(e.full_name, p.email) AS instructor_name
+                p.email AS instructor_name
             FROM payments p
-            LEFT JOIN educators e ON e.email = p.email
             ORDER BY p.payment_date DESC
             LIMIT 10
             """
@@ -2987,6 +2985,19 @@ def _ensure_schema():
             cursor.execute("""
                 ALTER TABLE orders
                 ALTER COLUMN student_id DROP NOT NULL
+            """)
+
+        # Ensure educators table has email column (needed for payment lookups)
+        cursor.execute("""
+            SELECT COUNT(*) AS cnt FROM information_schema.columns
+            WHERE table_schema = 'public'
+              AND table_name = 'educators'
+              AND column_name = 'email'
+        """)
+        if cursor.fetchone()["cnt"] == 0:
+            cursor.execute("""
+                ALTER TABLE educators
+                ADD COLUMN email VARCHAR(255) NULL
             """)
 
         conn.commit()
