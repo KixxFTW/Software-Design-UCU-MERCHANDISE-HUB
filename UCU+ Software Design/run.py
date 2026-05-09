@@ -2321,7 +2321,6 @@ def admin_orders():
             LEFT JOIN students s ON s.student_id = o.student_id
             LEFT JOIN educators e ON e.id = o.instructor_id
             LEFT JOIN payments p ON p.reference_number = CONCAT('ORD-', o.id)
-            WHERE NOT (o.status = 'Completed' AND o.payment_status = 'Success')
             ORDER BY o.created_at DESC, o.id DESC
             """
         )
