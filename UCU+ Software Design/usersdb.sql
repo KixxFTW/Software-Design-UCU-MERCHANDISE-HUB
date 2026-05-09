@@ -66,11 +66,13 @@ CREATE TABLE orders (
 CREATE TABLE order_items (
     id INT AUTO_INCREMENT PRIMARY KEY,
     order_id INT NOT NULL,
-    item_id INT NOT NULL,
+    item_id INT NULL,
+    item_name VARCHAR(255),
+    item_image_url VARCHAR(255),
     quantity INT NOT NULL,
     price DECIMAL(10, 2) NOT NULL,
     FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
-    FOREIGN KEY (item_id) REFERENCES merchandise(id) ON DELETE CASCADE
+    FOREIGN KEY (item_id) REFERENCES merchandise(id) ON DELETE SET NULL
 );
 
 CREATE TABLE cart_items (

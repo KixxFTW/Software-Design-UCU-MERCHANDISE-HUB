@@ -86,7 +86,10 @@
                                     </div>
                                 </div>
                                 {% else %}
-                                <h3>N/A</h3>
+                                <div class="item-row">
+                                    <h3>Order #{{ purchase.order_id }}</h3>
+                                    <span class="unit-price">Product details retained</span>
+                                </div>
                                 {% endfor %}
                             </div>
                         </div>

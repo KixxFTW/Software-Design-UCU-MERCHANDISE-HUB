@@ -1954,7 +1954,7 @@ def process_order():
                 # Normalize name because the UI hardcodes item names (some include trailing spaces).
                 normalized_name = " ".join(str(name).strip().split())
                 cursor.execute(
-                    "SELECT id, price, stock FROM merchandise WHERE LOWER(TRIM(name)) = LOWER(%s)",
+                    "SELECT id, name, price, stock, image_url FROM merchandise WHERE LOWER(TRIM(name)) = LOWER(%s)",
                     (normalized_name,),
                 )
                 merch = cursor.fetchone()
@@ -1967,7 +1967,7 @@ def process_order():
                 price = float(merch['price'])
                 line_total = price * quantity
                 total_amount += line_total
-                order_items.append({'item_id': merch['id'], 'quantity': quantity, 'price': price})
+                order_items.append({'item_id': merch['id'], 'item_name': merch['name'], 'item_image_url': (merch.get('image_url') or ''), 'quantity': quantity, 'price': price})
 
             # Create order.
             # Your local DB schema may include additional NOT NULL columns (e.g., payment_method),
@@ -2027,8 +2027,8 @@ def process_order():
             # Add order items
             for item in order_items:
                 cursor.execute(
-                    "INSERT INTO order_items (order_id, item_id, quantity, price) VALUES (%s, %s, %s, %s)",
-                    (order_id, item['item_id'], item['quantity'], item['price']),
+                    "INSERT INTO order_items (order_id, item_id, item_name, item_image_url, quantity, price) VALUES (%s, %s, %s, %s, %s, %s)",
+                    (order_id, item['item_id'], item['item_name'], item['item_image_url'], item['quantity'], item['price']),
                 )
                 cursor.execute(
                     "UPDATE merchandise SET stock = stock - %s WHERE id = %s",
@@ -2168,7 +2168,7 @@ def admin_dashboard():
                 """
                 SELECT
                     oi.quantity,
-                    COALESCE(m.name, 'Unknown item') AS product_name
+                    COALESCE(oi.item_name, m.name, 'Unknown item') AS product_name
                 FROM order_items oi
                 LEFT JOIN merchandise m ON m.id = oi.item_id
                 WHERE oi.order_id = %s
@@ -2332,7 +2332,7 @@ def admin_orders():
                 SELECT
                     oi.quantity,
                     oi.price,
-                    COALESCE(m.name, 'Unknown item') AS product_name
+                    COALESCE(oi.item_name, m.name, 'Unknown item') AS product_name
                 FROM order_items oi
                 LEFT JOIN merchandise m ON m.id = oi.item_id
                 WHERE oi.order_id = %s
@@ -2752,8 +2752,8 @@ def my_purchases():
                 o.created_at,
                 oi.quantity,
                 oi.price,
-                m.name AS item_name,
-                m.image_url,
+                COALESCE(oi.item_name, m.name) AS item_name,
+                COALESCE(oi.item_image_url, m.image_url) AS image_url,
                 (SELECT p.reference_number FROM payments p WHERE p.reference_number = CONCAT('ORD-', o.id) LIMIT 1) AS reference_number
             FROM orders o
             LEFT JOIN order_items oi ON o.id = oi.order_id
@@ -2919,8 +2919,8 @@ def instructor_my_purchases():
                 o.created_at,
                 oi.quantity,
                 oi.price,
-                m.name AS item_name,
-                m.image_url,
+                COALESCE(oi.item_name, m.name) AS item_name,
+                COALESCE(oi.item_image_url, m.image_url) AS image_url,
                 (SELECT p.reference_number FROM payments p WHERE p.reference_number = CONCAT('ORD-', o.id) LIMIT 1) AS reference_number
             FROM orders o
             LEFT JOIN order_items oi ON o.id = oi.order_id
