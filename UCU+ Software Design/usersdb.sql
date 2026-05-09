@@ -2,9 +2,10 @@ CREATE TABLE password_resets (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id VARCHAR(255) NOT NULL,
     email VARCHAR(255) NOT NULL,
-    token VARCHAR(255) NOT NULL UNIQUE,
+    otp VARCHAR(10),
+    token VARCHAR(255) UNIQUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    expires_at TIMESTAMP NOT NULL,
+    expires_at TIMESTAMP NULL,
     used BOOLEAN DEFAULT FALSE,
     INDEX (token),
     INDEX (email)

@@ -2603,7 +2603,7 @@ def forgot_password():
             if existing:
                 cursor.execute("UPDATE password_resets SET otp = %s WHERE user_id = %s", (otp, user['student_id']))
             else:
-                cursor.execute("INSERT INTO password_resets (user_id, otp) VALUES (%s, %s)", (user['student_id'], otp))
+                cursor.execute("INSERT INTO password_resets (user_id, email, otp) VALUES (%s, %s, %s)", (user['student_id'], user['email'], otp))
             conn.commit()
 
             # Send the OTP via email
