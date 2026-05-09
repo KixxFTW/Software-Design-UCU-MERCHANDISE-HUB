@@ -369,7 +369,10 @@
                         <div class="dept-name">{{ item.name }}</div>
                         <p class="item-description">{{ item.description or 'No description available.' }}</p>
                         <p class="price">₱{{ "%.0f"|format(item.price) if item.price == item.price|int else "%.2f"|format(item.price) }}</p>
-                        <select>
+                        {% if 'lace' in item.name|lower %}
+                        <input type="number" class="item-qty" value="1" min="1" max="99" style="width: 80px; padding: 8px; border-radius: 6px; border: 1px solid #ccc;">
+                        {% else %}
+                        <select class="item-size">
                             <option>Select Size</option>
                             <option>Small</option>
                             <option>Medium</option>
@@ -377,6 +380,7 @@
                             <option>X-Large</option>
                             <option>2X-Large</option>
                         </select>
+                        {% endif %}
                         <button class="add-to-cart" data-item='{"name": {{ item.name|tojson }}, "price": {{ item.price }}, "image": {{ (item.image_url or '')|replace('/static/images/', '')|tojson }}}'>Add to Cart</button>
                     </div>
                     {% else %}
@@ -1922,12 +1926,15 @@ document.addEventListener('DOMContentLoaded', function() {
     // Listen for clicks on each button
     addToCartButtons.forEach(button => {
         button.addEventListener('click', function() {
-            // Get the quantity from the select dropdown
-            const quantitySelect = button.previousElementSibling;
-            const quantity = parseInt(quantitySelect?.value) || 1;
+            // Get the input/select element before the button
+            const inputEl = button.previousElementSibling;
+            const isQtyInput = inputEl && inputEl.tagName === 'INPUT';
+            
+            // Get quantity (from number input or default to 1)
+            const quantity = isQtyInput ? (parseInt(inputEl.value) || 1) : 1;
                 
             // Get the size if it's a size select dropdown
-            const size = quantitySelect?.querySelector('option:checked')?.textContent || '';
+            const size = !isQtyInput && inputEl ? (inputEl.querySelector('option:checked')?.textContent || '') : '';
                 
             // Parse item details from the data-item attribute
             const item = JSON.parse(button.getAttribute('data-item'));
