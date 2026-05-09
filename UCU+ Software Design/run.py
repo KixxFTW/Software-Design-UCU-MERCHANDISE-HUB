@@ -18,12 +18,25 @@ import random
 import smtplib
 from email.mime.text import MIMEText
 
+# Load environment variables from .env.local
+try:
+    from dotenv import load_dotenv
+    env_path = os.path.join(os.path.dirname(__file__), '.env.local')
+    if os.path.isfile(env_path):
+        load_dotenv(env_path)
+    else:
+        load_dotenv()
+except Exception:
+    pass
+
 try:
     from supabase import create_client, Client
-    supabase: Client = create_client(
-        "https://rvbmzkxqvwjjzjhejvhf.supabase.co",
-        "sb_publishable_lDzGD6sdw4mNYJCSLm2q5A_ybDInjYI"
-    )
+    _supabase_url = os.environ.get("NEXT_PUBLIC_SUPABASE_URL") or os.environ.get("SUPABASE_URL")
+    _supabase_key = os.environ.get("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY") or os.environ.get("SUPABASE_KEY")
+    if _supabase_url and _supabase_key:
+        supabase: Client = create_client(_supabase_url, _supabase_key)
+    else:
+        supabase = None
 except Exception:
     supabase = None
 
