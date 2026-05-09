@@ -108,7 +108,7 @@ def get_google_provider_cfg():
 # Email sending function with fallback chain:
 #   1. SendGrid API (production / Vercel)
 #   2. Gmail SMTP  (local dev with GMAIL_APP_PASSWORD)
-#   3. Console-only (local dev without any email service – OTP is printed to terminal)
+#   3. Console-only fallback – returns 'console' as the method so callers can show content directly
 def send_email(to_email, subject, body):
     sender_email = os.environ.get('SENDGRID_FROM_EMAIL', 'valdezmarkjethro@gmail.com')
 
@@ -169,14 +169,15 @@ def send_email(to_email, subject, body):
             traceback.print_exc()
             # Fall through to console fallback
 
-    # ---- Attempt 3: Console fallback (development) ---------------------------
+    # ---- Attempt 3: Console fallback (no email service configured) -----------
     print("=" * 60)
     print("  EMAIL (console fallback – no email service configured)")
     print(f"  To:      {to_email}")
     print(f"  Subject: {subject}")
     print(f"  Body:    {body}")
     print("=" * 60)
-    return True, None
+    # Return 'console' as error to signal no real email was sent
+    return True, 'console'
 
 def _is_admin() -> bool:
     # Admin logic in this project is currently based on hardcoded student_id/course.
@@ -2670,7 +2671,11 @@ def forgot_password():
                     f"Your OTP for resetting your password is: {otp}")
 
             if email_sent:
-                flash('An OTP has been sent to your email.', 'success')
+                if email_err == 'console':
+                    # No email service configured – show OTP directly
+                    flash(f'Your OTP is: {otp} (email service not configured)', 'success')
+                else:
+                    flash('An OTP has been sent to your email.', 'success')
                 return redirect(f'/reset_password/{uid}?type={user_type}')
             else:
                 flash(f'Failed to send OTP email: {email_err}', 'danger')
