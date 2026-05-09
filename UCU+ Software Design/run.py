@@ -2399,7 +2399,10 @@ def admin_payments():
                 p.reference_number,
                 p.status,
                 p.payment_date,
-                o.id AS order_id,
+                CASE
+                    WHEN p.reference_number LIKE 'ORD-%' THEN CAST(SUBSTRING(p.reference_number FROM 5) AS INTEGER)
+                    ELSE NULL
+                END AS order_id,
                 o.student_id,
                 o.instructor_id,
                 COALESCE(s.first_name, s2.first_name, '') AS first_name,
