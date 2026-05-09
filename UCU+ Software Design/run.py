@@ -2605,7 +2605,7 @@ def forgot_password():
             otp = random.randint(100000, 999999)
 
             # Use student_id for students, id for instructors as user_id
-            uid = user.get('student_id') or user.get('id')
+            uid = str(user.get('student_id') or user.get('id'))
 
             # Save the OTP in the database
             cursor.execute("SELECT id FROM password_resets WHERE user_id = %s", (uid,))
@@ -2654,7 +2654,7 @@ def reset_password(user_id):
 
         try:
             cursor.execute("SELECT * FROM password_resets WHERE user_id = %s AND otp = %s",
-                        (user_id, otp))
+                        (str(user_id), otp))
             reset_request = cursor.fetchone()
 
             if reset_request:
