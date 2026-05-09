@@ -3,6 +3,12 @@ import mysql.connector
 import bcrypt
 import os
 import requests
+
+# Allow OAuth over HTTP for local development only.
+# (OAuthlib otherwise requires HTTPS and raises (insecure_transport).)
+if os.getenv("FLASK_ENV", "").lower() in {"development", "dev", "local"} or os.getenv("ENV", "").lower() in {"development", "dev", "local"}:
+    os.environ.setdefault("OAUTHLIB_INSECURE_TRANSPORT", "1")
+
 from oauthlib.oauth2 import WebApplicationClient
 import json
 from werkzeug.utils import secure_filename
@@ -15,6 +21,8 @@ from email.mime.text import MIMEText
 app = Flask(__name__)
 app.secret_key = 'Admin'  # Required for session and flash messages
 
+os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
+
 # Database configuration
 DB_CONFIG = {
     'host': '127.0.0.1',
@@ -24,8 +32,8 @@ DB_CONFIG = {
 }
 
 # Google OAuth2 configuration
-GOOGLE_CLIENT_ID = '58628545651-m1hruo8queisfor55q52p25a5f9tk2p7.apps.googleusercontent.com'
-GOOGLE_CLIENT_SECRET = 'yGOCSPX-5MXPolQWVDNt0h-8d1xgIfd1AEgU'
+GOOGLE_CLIENT_ID = '718773630578-uk82823k8jr69moufe0fl5rrg4r9dalf.apps.googleusercontent.com'
+GOOGLE_CLIENT_SECRET = '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'
 GOOGLE_DISCOVERY_URL = "https://accounts.google.com/.well-known/openid-configuration"
 
 # OAuth2 client setup
@@ -78,37 +86,481 @@ def send_email(to_email, subject, body):
         print(f"Error sending email: {str(e)}")
         return False
 
-# Example in-memory product list (replace with a database in production)
-products = [
-    {"id": 1, "name": "Computer Engineering Shirt", "price": 700, "image": "CEA CPE.png", "category": "Shirt", "stock": 10},
-    {"id": 2, "name": "Computer Engineering ID Lace", "price": 100, "image": "LACE CPE.png", "category": "Lace", "stock": 50},
-]
+def _is_admin() -> bool:
+    # Admin logic in this project is currently based on hardcoded student_id/course.
+    return bool(session.get('student_id')) and (
+        session.get('student_id') == 'ADMIN001' or session.get('course') == 'admin'
+    )
 
-@app.route('/api/products', methods=['GET'])
-def get_products():
-    return jsonify(products)
+def _merch_category_column(cursor) -> str:
+    """
+    Your project has mixed usage of `category` vs misspelled `catergory`.
+    Detect which column exists in the running DB.
+    """
+    cursor.execute("SHOW COLUMNS FROM merchandise")
+    cols = {row["Field"] if isinstance(row, dict) else row[0] for row in cursor.fetchall()}
+    if "catergory" in cols:
+        return "catergory"
+    return "category"
 
-@app.route('/api/products', methods=['POST'])
-def add_product():
-    new_product = request.json
-    new_product['id'] = len(products) + 1
-    products.append(new_product)
-    return jsonify({"message": "Product added successfully"}), 201
+def _to_public_image_url(raw_image: str | None) -> str:
+    if not raw_image:
+        return "/static/images/placeholder.png"
+    image = str(raw_image).strip()
+    if image.startswith("/static/") or image.startswith("http://") or image.startswith("https://"):
+        return image
+    return f"/static/images/{image}"
 
-@app.route('/api/products/<int:product_id>', methods=['PUT'])
-def update_product(product_id):
-    data = request.json
-    for product in products:
-        if product['id'] == product_id:
-            product.update(data)
-            return jsonify({"message": "Product updated successfully"})
-    return jsonify({"error": "Product not found"}), 404
+def _handle_instructor_google_oauth(user_info: dict):
+    """
+    Dedicated instructor Google OAuth handler:
+    - validate email against educators table
+    - update Google linkage
+    - set instructor session
+    """
+    email = (user_info.get("email") or "").strip().lower()
+    if not email:
+        return False, "Google account has no email.", None
 
-@app.route('/api/products/<int:product_id>', methods=['DELETE'])
-def delete_product(product_id):
-    global products
-    products = [product for product in products if product['id'] != product_id]
-    return jsonify({"message": "Product deleted successfully"})
+    conn = None
+    cursor = None
+    try:
+        conn = mysql.connector.connect(**DB_CONFIG)
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("SELECT * FROM educators WHERE LOWER(email) = %s", (email,))
+        instructor = cursor.fetchone()
+        if not instructor:
+            return False, "No instructor account found for this Google email. Please contact admin.", None
+
+        cursor.execute(
+            """
+            UPDATE educators
+            SET google_id = %s, google_email = %s
+            WHERE id = %s
+            """,
+            (user_info.get("sub"), email, instructor.get("id")),
+        )
+        conn.commit()
+
+        session['instructor_id'] = instructor.get('id')
+        session['full_name'] = instructor.get('full_name')
+        session['email'] = instructor.get('email')
+        session['institution'] = instructor.get('institution')
+        session['is_instructor'] = True
+        return True, None, instructor
+    except Exception as e:
+        return False, str(e), None
+    finally:
+        if cursor:
+            cursor.close()
+        if conn and conn.is_connected():
+            conn.close()
+
+@app.route('/api/merchandise', methods=['GET'])
+def api_get_merchandise():
+    conn = None
+    cursor = None
+    try:
+        conn = mysql.connector.connect(**DB_CONFIG)
+        cursor = conn.cursor(dictionary=True)
+        category_col = _merch_category_column(cursor)
+        cursor.execute(
+            f"""
+            SELECT
+                id,
+                name,
+                description,
+                price,
+                stock,
+                image_url,
+                {category_col} AS category
+            FROM merchandise
+            ORDER BY id DESC
+            """
+        )
+        rows = cursor.fetchall()
+        items = []
+        for row in rows:
+            items.append(
+                {
+                    "id": row.get("id"),
+                    "name": row.get("name"),
+                    "description": row.get("description") or "",
+                    "price": float(row.get("price") or 0),
+                    "stock": int(row.get("stock") or 0),
+                    "image_url": _to_public_image_url(row.get("image_url")),
+                    "category": (row.get("category") or "other"),
+                }
+            )
+        return jsonify(items)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    finally:
+        if cursor:
+            cursor.close()
+        if conn and conn.is_connected():
+            conn.close()
+
+@app.route('/api/products/<int:product_id>', methods=['GET'])
+def api_get_product(product_id: int):
+    """Used by AdminDashboard.html edit modal to prefill fields."""
+    if not _is_admin():
+        return jsonify({'error': 'Access denied'}), 403
+
+    conn = None
+    cursor = None
+    try:
+        conn = mysql.connector.connect(**DB_CONFIG)
+        cursor = conn.cursor(dictionary=True)
+        category_col = _merch_category_column(cursor)
+        cursor.execute(
+            f"""
+            SELECT
+                id,
+                name,
+                description,
+                price,
+                stock,
+                image_url,
+                {category_col} AS category
+            FROM merchandise
+            WHERE id = %s
+            """,
+            (product_id,),
+        )
+        product = cursor.fetchone()
+        if not product:
+            return jsonify({'error': 'Product not found'}), 404
+        return jsonify(product)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    finally:
+        if cursor:
+            cursor.close()
+        if conn and conn.is_connected():
+            conn.close()
+
+@app.route('/api/orders/<int:order_id>', methods=['GET'])
+def api_get_order(order_id: int):
+    if not _is_admin():
+        return jsonify({'error': 'Access denied'}), 403
+
+    conn = None
+    cursor = None
+    try:
+        conn = mysql.connector.connect(**DB_CONFIG)
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute(
+            """
+            SELECT
+                o.id,
+                o.student_id,
+                o.total_amount,
+                o.status,
+                o.payment_status,
+                o.payment_method,
+                o.delivery_option,
+                o.delivery_address,
+                o.created_at,
+                s.first_name,
+                s.last_name,
+                s.email
+            FROM orders o
+            LEFT JOIN students s ON s.student_id = o.student_id
+            WHERE o.id = %s
+            """,
+            (order_id,),
+        )
+        order = cursor.fetchone()
+        if not order:
+            return jsonify({'error': 'Order not found'}), 404
+
+        cursor.execute(
+            """
+            SELECT
+                oi.quantity,
+                oi.price,
+                m.name AS product_name
+            FROM order_items oi
+            LEFT JOIN merchandise m ON m.id = oi.item_id
+            WHERE oi.order_id = %s
+            """,
+            (order_id,),
+        )
+        order["items"] = cursor.fetchall()
+        return jsonify(order)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    finally:
+        if cursor:
+            cursor.close()
+        if conn and conn.is_connected():
+            conn.close()
+
+@app.route('/api/orders/<int:order_id>/status', methods=['POST'])
+def api_update_order_status(order_id: int):
+    if not _is_admin():
+        return jsonify({'error': 'Access denied'}), 403
+
+    data = request.get_json(silent=True) or {}
+    new_status = (data.get('status') or '').strip().lower()
+    reference_number = (data.get('reference_number') or '').strip()
+    allowed = {'pending': 'Pending', 'completed': 'Completed', 'cancelled': 'Cancelled'}
+    if new_status not in allowed:
+        return jsonify({'error': 'Invalid order status'}), 400
+
+    conn = None
+    cursor = None
+    try:
+        conn = mysql.connector.connect(**DB_CONFIG)
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("UPDATE orders SET status=%s WHERE id=%s", (allowed[new_status], order_id))
+
+        # When order is completed, insert into payments table
+        if new_status == 'completed':
+            cursor.execute(
+                """
+                SELECT o.total_amount, o.payment_method, s.email AS student_email, e.email AS instructor_email
+                FROM orders o
+                LEFT JOIN students s ON s.student_id = o.student_id
+                LEFT JOIN educators e ON e.id = o.instructor_id
+                WHERE o.id = %s
+                """,
+                (order_id,),
+            )
+            order = cursor.fetchone()
+            if order:
+                email = order.get('student_email') or order.get('instructor_email') or 'unknown'
+                amount = order.get('total_amount') or 0
+                payment_method = order.get('payment_method') or 'Unknown'
+                ref = reference_number if reference_number else f"ORD-{order_id}"
+                cursor.execute(
+                    """
+                    INSERT INTO payments (email, amount, payment_method, reference_number, status, payment_date)
+                    VALUES (%s, %s, %s, %s, 'Success', NOW())
+                    ON DUPLICATE KEY UPDATE status='Success', payment_date=NOW(), reference_number=%s
+                    """,
+                    (email, amount, payment_method, ref, ref),
+                )
+
+        conn.commit()
+        return jsonify({'success': True, 'status': new_status})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    finally:
+        if cursor:
+            cursor.close()
+        if conn and conn.is_connected():
+            conn.close()
+
+@app.route('/api/orders/<int:order_id>/payment-status', methods=['POST'])
+def api_update_order_payment_status(order_id: int):
+    if not _is_admin():
+        return jsonify({'error': 'Access denied'}), 403
+
+    data = request.get_json(silent=True) or {}
+    new_status = (data.get('payment_status') or '').strip()
+    allowed = {'Pending', 'Success', 'Failed', 'Refund Requested', 'Refunded'}
+    if new_status not in allowed:
+        return jsonify({'error': 'Invalid payment status'}), 400
+
+    conn = None
+    cursor = None
+    try:
+        conn = mysql.connector.connect(**DB_CONFIG)
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("UPDATE orders SET payment_status=%s WHERE id=%s", (new_status, order_id))
+
+        # If marking as Success, insert into payments table
+        if new_status == 'Success':
+            cursor.execute(
+                """
+                SELECT o.total_amount, o.payment_method, s.email AS student_email, e.email AS instructor_email
+                FROM orders o
+                LEFT JOIN students s ON s.student_id = o.student_id
+                LEFT JOIN educators e ON e.id = o.instructor_id
+                WHERE o.id = %s
+                """,
+                (order_id,),
+            )
+            order = cursor.fetchone()
+            if order:
+                email = order.get('student_email') or order.get('instructor_email') or 'unknown'
+                amount = order.get('total_amount') or 0
+                payment_method = order.get('payment_method') or 'Unknown'
+                ref = f"ORD-{order_id}"
+                cursor.execute(
+                    """
+                    INSERT INTO payments (email, amount, payment_method, reference_number, status, payment_date)
+                    VALUES (%s, %s, %s, %s, 'Success', NOW())
+                    ON DUPLICATE KEY UPDATE status='Success', payment_date=NOW()
+                    """,
+                    (email, amount, payment_method, ref),
+                )
+
+        # If marking as Refunded, remove from payments table
+        if new_status == 'Refunded':
+            cursor.execute(
+                "DELETE FROM payments WHERE reference_number = %s",
+                (f"ORD-{order_id}",),
+            )
+
+        conn.commit()
+        return jsonify({'success': True, 'payment_status': new_status})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    finally:
+        if cursor:
+            cursor.close()
+        if conn and conn.is_connected():
+            conn.close()
+
+@app.route('/api/orders/<int:order_id>/process', methods=['POST'])
+def api_process_order(order_id: int):
+    if not _is_admin():
+        return jsonify({'error': 'Access denied'}), 403
+    conn = None
+    cursor = None
+    try:
+        conn = mysql.connector.connect(**DB_CONFIG)
+        cursor = conn.cursor()
+        cursor.execute("UPDATE orders SET status='Pending' WHERE id=%s", (order_id,))
+        conn.commit()
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    finally:
+        if cursor:
+            cursor.close()
+        if conn and conn.is_connected():
+            conn.close()
+
+@app.route('/api/orders/<int:order_id>/complete', methods=['POST'])
+def api_complete_order(order_id: int):
+    if not _is_admin():
+        return jsonify({'error': 'Access denied'}), 403
+    conn = None
+    cursor = None
+    try:
+        conn = mysql.connector.connect(**DB_CONFIG)
+        cursor = conn.cursor()
+        cursor.execute("UPDATE orders SET status='Completed' WHERE id=%s", (order_id,))
+        conn.commit()
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    finally:
+        if cursor:
+            cursor.close()
+        if conn and conn.is_connected():
+            conn.close()
+
+@app.route('/api/orders/<int:order_id>/cancel', methods=['POST'])
+def api_cancel_order(order_id: int):
+    if not _is_admin():
+        return jsonify({'error': 'Access denied'}), 403
+    conn = None
+    cursor = None
+    try:
+        conn = mysql.connector.connect(**DB_CONFIG)
+        cursor = conn.cursor()
+        cursor.execute("UPDATE orders SET status='Cancelled' WHERE id=%s", (order_id,))
+        conn.commit()
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    finally:
+        if cursor:
+            cursor.close()
+        if conn and conn.is_connected():
+            conn.close()
+
+@app.route('/api/payments/<int:payment_id>', methods=['GET'])
+def api_get_payment(payment_id: int):
+    if not _is_admin():
+        return jsonify({'error': 'Access denied'}), 403
+
+    conn = None
+    cursor = None
+    try:
+        conn = mysql.connector.connect(**DB_CONFIG)
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute(
+            """
+            SELECT
+                p.id,
+                p.email,
+                p.amount,
+                p.payment_method,
+                p.reference_number,
+                p.status,
+                p.payment_date,
+                COALESCE(e.full_name, p.email) AS instructor_name
+            FROM payments p
+            LEFT JOIN educators e ON e.email = p.email
+            WHERE p.id = %s
+            """,
+            (payment_id,),
+        )
+        payment = cursor.fetchone()
+        if not payment:
+            return jsonify({'error': 'Payment not found'}), 404
+        payment["amount"] = float(payment.get("amount") or 0)
+        return jsonify(payment)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    finally:
+        if cursor:
+            cursor.close()
+        if conn and conn.is_connected():
+            conn.close()
+
+@app.route('/api/payments/<int:payment_id>/status', methods=['POST'])
+def api_update_payment_status(payment_id: int):
+    if not _is_admin():
+        return jsonify({'error': 'Access denied'}), 403
+
+    data = request.get_json(silent=True) or {}
+    new_status = (data.get('status') or '').strip()
+    allowed = {'Pending', 'Success', 'Failed', 'Refund Requested', 'Refunded'}
+    if new_status not in allowed:
+        return jsonify({'error': 'Invalid payment status'}), 400
+
+    conn = None
+    cursor = None
+    try:
+        conn = mysql.connector.connect(**DB_CONFIG)
+        cursor = conn.cursor()
+        cursor.execute("UPDATE payments SET status=%s WHERE id=%s", (new_status, payment_id))
+        conn.commit()
+        return jsonify({'success': True, 'status': new_status})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    finally:
+        if cursor:
+            cursor.close()
+        if conn and conn.is_connected():
+            conn.close()
+
+@app.route('/api/payments/<int:payment_id>/confirm', methods=['POST'])
+def api_confirm_payment(payment_id: int):
+    if not _is_admin():
+        return jsonify({'error': 'Access denied'}), 403
+    conn = None
+    cursor = None
+    try:
+        conn = mysql.connector.connect(**DB_CONFIG)
+        cursor = conn.cursor()
+        cursor.execute("UPDATE payments SET status='Success' WHERE id=%s", (payment_id,))
+        conn.commit()
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    finally:
+        if cursor:
+            cursor.close()
+        if conn and conn.is_connected():
+            conn.close()
 
 # ROUTE FOR THE LOGIN PAGE
 @app.route('/')
@@ -141,8 +593,8 @@ def process_signup():
         cursor = conn.cursor()
         
         # Insert new user
-        query = "INSERT INTO students (student_id, first_name, last_name, email, password) VALUES (%s, %s, %s, %s, %s)"
-        cursor.execute(query, (student_id, first_name, last_name, email, hashed_password))
+        query = "INSERT INTO students (student_id, first_name, last_name, email, password, course) VALUES (%s, %s, %s, %s, %s, %s)"
+        cursor.execute(query, (student_id, first_name, last_name, email, hashed_password, 'N/A'))
         conn.commit()
         
         # After successful signup, before redirecting to login/dashboard:
@@ -279,6 +731,8 @@ def login():
                 session['last_name'] = user['last_name']
                 session['email'] = user['email']
                 session['role'] = user.get('role', 'student')  # Store user role in session
+                # Needed for admin checks in other routes (e.g. `/admin/dashboard`)
+                session['course'] = user.get('course')
                 
                 # Clear any unread results
                 cursor.fetchall()
@@ -331,10 +785,13 @@ def google_login_instructor():
     google_provider_cfg = get_google_provider_cfg()
     authorization_endpoint = google_provider_cfg["authorization_endpoint"]
     
-    # Use the client to generate a request URI with state parameter to track instructor flow
+    # Store instructor intent in session so the shared callback can route correctly
+    session['oauth_target'] = 'instructor'
+    
+    # Use the SAME redirect_uri as the student flow (must match Google Console config)
     request_uri = client.prepare_request_uri(
         authorization_endpoint,
-        redirect_uri=url_for('google_instructor_callback', _external=True),
+        redirect_uri=url_for('google_callback', _external=True),
         scope=["openid", "email", "profile"],
     )
     return redirect(request_uri)
@@ -376,6 +833,17 @@ def google_callback():
         
         if userinfo_response.json().get("email_verified"):
             user_info = userinfo_response.json()
+            
+            # Route based on session flag set in /login/google/instructor
+            if session.pop('oauth_target', None) == 'instructor':
+                ok, error_message, instructor = _handle_instructor_google_oauth(user_info)
+                if not ok:
+                    flash(error_message or 'Instructor Google login failed.', 'danger')
+                    return redirect('/')
+                flash(f"Welcome {instructor.get('full_name', 'Instructor')}! You have successfully logged in as an instructor.", 'success')
+                return redirect('/instructor/dashboard')
+            
+            # Otherwise, handle as student flow
             email = user_info["email"]
             first_name = user_info.get("given_name", "")
             last_name = user_info.get("family_name", "")
@@ -395,8 +863,8 @@ def google_callback():
                 
                 # Store Google account information
                 query = """
-                    INSERT INTO students (student_id, first_name, last_name, email, password, google_id, google_email, google_password)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                    INSERT INTO students (student_id, first_name, last_name, email, password, course, google_id, google_email, google_password)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
                 """
                 cursor.execute(query, (
                     google_id, 
@@ -404,6 +872,7 @@ def google_callback():
                     last_name, 
                     email, 
                     hashed_password,
+                    'N/A',
                     google_id,
                     email,
                     hashed_password  # Store the hashed password for Google account
@@ -468,54 +937,12 @@ def google_instructor_callback():
         
         if userinfo_response.json().get("email_verified"):
             user_info = userinfo_response.json()
-            email = user_info["email"]
-            full_name = f"{user_info.get('given_name', '')} {user_info.get('family_name', '')}"
-            google_id = user_info["sub"]
+            ok, error_message, instructor = _handle_instructor_google_oauth(user_info)
+            if not ok:
+                flash(error_message or 'Instructor Google login failed.', 'danger')
+                return redirect('/')
             
-            # Check if instructor exists in database
-            conn = mysql.connector.connect(**DB_CONFIG)
-            cursor = conn.cursor(dictionary=True)
-            query = "SELECT * FROM educators WHERE email = %s"
-            cursor.execute(query, (email,))
-            instructor = cursor.fetchone()
-            
-            if not instructor:
-                # Generate a random password for the instructor
-                random_password = os.urandom(16).hex()
-                hashed_password = bcrypt.hashpw(random_password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
-                
-                # Store Google account information
-                query = """
-                    INSERT INTO educators (full_name, email, password, institution, subject, google_id, google_email, google_password)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-                """
-                cursor.execute(query, (
-                    full_name,
-                    email,
-                    hashed_password,
-                    "Institution not specified",
-                    "Subject not specified",
-                    google_id,
-                    email,
-                    hashed_password  # Store the hashed password for Google account
-                ))
-                conn.commit()
-                
-                # Get the newly created instructor
-                query = "SELECT * FROM educators WHERE email = %s"
-                cursor.execute(query, (email,))
-                instructor = cursor.fetchone()
-            session['instructor_id'] = instructor.get('id')
-            session['full_name'] = instructor.get('full_name')
-            session['email'] = instructor.get('email')
-            session['institution'] = instructor.get('institution')
-            session['is_instructor'] = True
-            
-            cursor.fetchall()  # Clear any unread results
-            cursor.close()
-            conn.close()
-            
-            flash(f'Welcome {full_name}! You have successfully logged in as an instructor.', 'success')
+            flash(f"Welcome {instructor.get('full_name', 'Instructor')}! You have successfully logged in as an instructor.", 'success')
             return redirect('/instructor/dashboard')
         else:
             flash('Google authentication failed. Email not verified.', 'danger')
@@ -552,13 +979,14 @@ def google_api_callback():
     if not user:
         # Create new user if doesn't exist - using empty string password instead of bytes
         empty_password_hash = bcrypt.hashpw("".encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
-        query = "INSERT INTO students (student_id, first_name, last_name, email, password) VALUES (%s, %s, %s, %s, %s)"
+        query = "INSERT INTO students (student_id, first_name, last_name, email, password, course) VALUES (%s, %s, %s, %s, %s, %s)"
         cursor.execute(query, (
             user_info.get('sub'),  # Use Google user ID as student_id
             user_info.get('given_name'),
             user_info.get('family_name'),
             user_info.get('email'),
-            empty_password_hash
+            empty_password_hash,
+            'N/A'
         ))
         conn.commit()
         user = {
@@ -619,14 +1047,42 @@ def instructor_dashboard():
         # Calculate user initials
         full_name = session.get('full_name', '')
         initials = ''.join([name[0] for name in full_name.split() if name])
-        
+
+        conn = None
+        cursor = None
+        merchandise = []
+        try:
+            conn = mysql.connector.connect(**DB_CONFIG)
+            cursor = conn.cursor(dictionary=True)
+            category_col = _merch_category_column(cursor)
+            cursor.execute(
+                f"""
+                SELECT id, name, description, price, stock, image_url, {category_col} AS category
+                FROM merchandise
+                ORDER BY id DESC
+                """
+            )
+            merchandise = cursor.fetchall()
+            for item in merchandise:
+                img = item.get('image_url') or ''
+                if img and not img.startswith('/'):
+                    item['image_url'] = f'/static/images/{img}'
+        except Exception as e:
+            print(f"[instructor_dashboard ERROR] {e}")
+        finally:
+            if cursor:
+                cursor.close()
+            if conn and conn.is_connected():
+                conn.close()
+
         return render_template(
-            'InstructorDashboard.html',  # You'll need to create this template
+            'InstructorDashboard.html',
             full_name=session.get('full_name'),
             email=session.get('email'),
             institution=session.get('institution'),
             user_initials=initials,
-            user_name=full_name
+            user_name=full_name,
+            merchandise=merchandise
         )
     else:
         flash('Please log in as an instructor to access the dashboard.', 'danger')
@@ -1130,7 +1586,7 @@ def instructor_payment():
         # Check if instructor is logged in using email
         if 'email' not in session:
             flash('Please log in to view payment details.', 'warning')
-            return redirect(url_for('instructor_login'))
+            return redirect('/')
 
         instructor_email = session.get('email')
         
@@ -1190,30 +1646,48 @@ def instructor_payment():
 # Cart Management Routes
 @app.route('/add_to_cart', methods=['POST'])
 def add_to_cart():
-    if 'instructor_id' not in session:
+    # Check if user is logged in (either student or instructor)
+    user_id = session.get('student_id') or session.get('instructor_id')
+    user_type = 'student_id' if 'student_id' in session else 'instructor_id'
+    
+    if not user_id:
         return jsonify({'error': 'Please log in to add items to cart'}), 401
     
     try:
         data = request.get_json()
-        item_id = data.get('item_id')
+        item_identifier = data.get('item_id')  # Could be ID or name
         quantity = data.get('quantity', 1)
+        size = data.get('size')
         
         conn = mysql.connector.connect(**DB_CONFIG)
         cursor = conn.cursor(dictionary=True)
         
-        # Get item details
-        cursor.execute("SELECT * FROM merchandise WHERE id = %s", (item_id,))
+        # Try to get item by ID first, then by name if ID fails
+        cursor.execute("SELECT * FROM merchandise WHERE id = %s", (item_identifier,))
         item = cursor.fetchone()
         
         if not item:
-            return jsonify({'error': 'Item not found'}), 404
+            # If not found by ID, try by name
+            cursor.execute("SELECT * FROM merchandise WHERE name = %s", (item_identifier,))
+            item = cursor.fetchone()
         
-        # Add to cart in database
-        cursor.execute("""
-            INSERT INTO cart_items (instructor_id, item_id, quantity)
-            VALUES (%s, %s, %s)
-            ON DUPLICATE KEY UPDATE quantity = quantity + %s
-        """, (session['instructor_id'], item_id, quantity, quantity))
+        if not item:
+            return jsonify({'error': f'Item not found: {item_identifier}'}), 404
+        
+        # Add to cart in database using the resolved merchandise row ID
+        item_db_id = item['id']
+        if user_type == 'student_id':
+            cursor.execute("""
+                INSERT INTO cart_items (student_id, item_id, quantity)
+                VALUES (%s, %s, %s)
+                ON DUPLICATE KEY UPDATE quantity = quantity + %s
+            """, (user_id, item_db_id, quantity, quantity))
+        else:
+            cursor.execute("""
+                INSERT INTO cart_items (instructor_id, item_id, quantity)
+                VALUES (%s, %s, %s)
+                ON DUPLICATE KEY UPDATE quantity = quantity + %s
+            """, (user_id, item_db_id, quantity, quantity))
         
         conn.commit()
         cursor.close()
@@ -1235,7 +1709,11 @@ def add_to_cart():
 
 @app.route('/remove_from_cart', methods=['POST'])
 def remove_from_cart():
-    if 'instructor_id' not in session:
+    # Check if user is logged in (either student or instructor)
+    user_id = session.get('student_id') or session.get('instructor_id')
+    user_type = 'student_id' if 'student_id' in session else 'instructor_id'
+    
+    if not user_id:
         return jsonify({'error': 'Please log in to modify cart'}), 401
     
     try:
@@ -1245,10 +1723,17 @@ def remove_from_cart():
         conn = mysql.connector.connect(**DB_CONFIG)
         cursor = conn.cursor()
         
-        cursor.execute("""
-            DELETE FROM cart_items 
-            WHERE instructor_id = %s AND item_id = %s
-        """, (session['instructor_id'], item_id))
+        # Delete from cart using appropriate column
+        if user_type == 'student_id':
+            cursor.execute("""
+                DELETE FROM cart_items 
+                WHERE student_id = %s AND item_id = %s
+            """, (user_id, item_id))
+        else:
+            cursor.execute("""
+                DELETE FROM cart_items 
+                WHERE instructor_id = %s AND item_id = %s
+            """, (user_id, item_id))
         
         conn.commit()
         cursor.close()
@@ -1264,7 +1749,11 @@ def remove_from_cart():
 
 @app.route('/update_cart_quantity', methods=['POST'])
 def update_cart_quantity():
-    if 'instructor_id' not in session:
+    # Check if user is logged in (either student or instructor)
+    user_id = session.get('student_id') or session.get('instructor_id')
+    user_type = 'student_id' if 'student_id' in session else 'instructor_id'
+    
+    if not user_id:
         return jsonify({'error': 'Please log in to modify cart'}), 401
     
     try:
@@ -1278,11 +1767,19 @@ def update_cart_quantity():
         conn = mysql.connector.connect(**DB_CONFIG)
         cursor = conn.cursor()
         
-        cursor.execute("""
-            UPDATE cart_items 
-            SET quantity = %s 
-            WHERE instructor_id = %s AND item_id = %s
-        """, (quantity, session['instructor_id'], item_id))
+        # Update cart using appropriate column
+        if user_type == 'student_id':
+            cursor.execute("""
+                UPDATE cart_items 
+                SET quantity = %s 
+                WHERE student_id = %s AND item_id = %s
+            """, (quantity, user_id, item_id))
+        else:
+            cursor.execute("""
+                UPDATE cart_items 
+                SET quantity = %s 
+                WHERE instructor_id = %s AND item_id = %s
+            """, (quantity, user_id, item_id))
         
         conn.commit()
         cursor.close()
@@ -1298,24 +1795,42 @@ def update_cart_quantity():
 
 @app.route('/get_cart', methods=['GET'])
 def get_cart():
-    if 'instructor_id' not in session:
+    # Check if user is logged in (either student or instructor)
+    user_id = session.get('student_id') or session.get('instructor_id')
+    user_type = 'student_id' if 'student_id' in session else 'instructor_id'
+    
+    if not user_id:
         return jsonify({'error': 'Please log in to view cart'}), 401
     
     try:
         conn = mysql.connector.connect(**DB_CONFIG)
         cursor = conn.cursor(dictionary=True)
         
-        cursor.execute("""
-            SELECT ci.*, m.name, m.price, m.image_url
-            FROM cart_items ci
-            JOIN merchandise m ON ci.item_id = m.id
-            WHERE ci.instructor_id = %s
-        """, (session['instructor_id'],))
+        # Use appropriate column name based on user type
+        if user_type == 'student_id':
+            cursor.execute("""
+                SELECT ci.*, m.name, m.price, m.image_url
+                FROM cart_items ci
+                JOIN merchandise m ON ci.item_id = m.id
+                WHERE ci.student_id = %s
+            """, (user_id,))
+        else:
+            cursor.execute("""
+                SELECT ci.*, m.name, m.price, m.image_url
+                FROM cart_items ci
+                JOIN merchandise m ON ci.item_id = m.id
+                WHERE ci.instructor_id = %s
+            """, (user_id,))
         
         cart_items = cursor.fetchall()
-        
         cursor.close()
         conn.close()
+
+        # Normalize image URLs to full static paths
+        for item in cart_items:
+            img = item.get('image_url') or ''
+            if img and not img.startswith('/'):
+                item['image_url'] = f'/static/images/{img}'
         
         return jsonify({
             'success': True,
@@ -1328,57 +1843,145 @@ def get_cart():
 # Order Processing Routes
 @app.route('/process_order', methods=['POST'])
 def process_order():
-    if 'instructor_id' not in session:
-        return jsonify({'error': 'Please log in to process order'}), 401
-    
     try:
+        # Allow both student and instructor sessions to place an order.
+        buyer_id = session.get('student_id') or session.get('instructor_id')
+        if not buyer_id:
+            return jsonify({'error': 'Please log in to process order'}), 401
+
         data = request.get_json()
+        if not isinstance(data, dict):
+            return jsonify({'error': 'Invalid JSON payload'}), 400
+
         payment_method = data.get('payment_method')
         delivery_option = data.get('delivery_option')
         delivery_address = data.get('delivery_address')
+        cart_items = data.get('cart_items') or []
         
         if not all([payment_method, delivery_option, delivery_address]):
             return jsonify({'error': 'Missing required order information'}), 400
-        
+
         conn = mysql.connector.connect(**DB_CONFIG)
-        cursor = conn.cursor()
-        
-        # Start transaction
-        conn.start_transaction()
+        cursor = conn.cursor(dictionary=True)
+
+        # If frontend didn't send cart_items, load from database cart for this user
+        if not isinstance(cart_items, list) or len(cart_items) == 0:
+            user_type = 'student_id' if 'student_id' in session else 'instructor_id'
+            user_id = session.get('student_id') or session.get('instructor_id')
+            if user_type == 'student_id':
+                cursor.execute("""
+                    SELECT m.name, ci.quantity
+                    FROM cart_items ci
+                    JOIN merchandise m ON ci.item_id = m.id
+                    WHERE ci.student_id = %s
+                """, (user_id,))
+            else:
+                cursor.execute("""
+                    SELECT m.name, ci.quantity
+                    FROM cart_items ci
+                    JOIN merchandise m ON ci.item_id = m.id
+                    WHERE ci.instructor_id = %s
+                """, (user_id,))
+            rows = cursor.fetchall()
+            cart_items = [{'name': r['name'], 'quantity': r['quantity']} for r in rows]
+
+        if not isinstance(cart_items, list) or len(cart_items) == 0:
+            return jsonify({'error': 'Cart is empty'}), 400
         
         try:
-            # Get cart items
-            cursor.execute("""
-                SELECT ci.*, m.price
-                FROM cart_items ci
-                JOIN merchandise m ON ci.item_id = m.id
-                WHERE ci.instructor_id = %s
-            """, (session['instructor_id'],))
-            cart_items = cursor.fetchall()
-            
-            if not cart_items:
-                return jsonify({'error': 'Cart is empty'}), 400
-            
-            # Calculate total amount
-            total_amount = sum(item['price'] * item['quantity'] for item in cart_items)
-            
-            # Create order
-            cursor.execute("""
-                INSERT INTO orders (instructor_id, total_amount, payment_method, delivery_option, delivery_address, status)
-                VALUES (%s, %s, %s, %s, %s, 'Pending')
-            """, (session['instructor_id'], total_amount, payment_method, delivery_option, delivery_address))
+            # Build order items by mapping cart item names to merchandise IDs/prices.
+            order_items = []
+            total_amount = 0.0
+
+            for raw_item in cart_items:
+                name = (raw_item or {}).get('name')
+                quantity = int((raw_item or {}).get('quantity') or 0)
+                if not name or quantity <= 0:
+                    return jsonify({'error': 'Invalid cart item data'}), 400
+
+                # Normalize name because the UI hardcodes item names (some include trailing spaces).
+                normalized_name = " ".join(str(name).strip().split())
+                cursor.execute(
+                    "SELECT id, price, stock FROM merchandise WHERE LOWER(TRIM(name)) = LOWER(%s)",
+                    (normalized_name,),
+                )
+                merch = cursor.fetchone()
+                if not merch:
+                    return jsonify({'error': f'Item not found in database: {normalized_name}'}), 400
+
+                if merch['stock'] is not None and int(merch['stock']) < quantity:
+                    return jsonify({'error': f'Not enough stock for: {normalized_name}'}), 400
+
+                price = float(merch['price'])
+                line_total = price * quantity
+                total_amount += line_total
+                order_items.append({'item_id': merch['id'], 'quantity': quantity, 'price': price})
+
+            # Create order.
+            # Your local DB schema may include additional NOT NULL columns (e.g., payment_method),
+            # so we detect available columns and build the INSERT accordingly.
+            cursor.execute("SHOW COLUMNS FROM orders")
+            order_columns = {col["Field"] for col in cursor.fetchall()}
+
+            insert_cols = []
+            insert_vals = []
+
+            # Required in all known schemas — choose column based on actual session type
+            user_type = 'student' if 'student_id' in session else 'instructor'
+            if user_type == 'student' and "student_id" in order_columns:
+                insert_cols.append("student_id")
+                insert_vals.append(buyer_id)
+            elif user_type == 'instructor' and "instructor_id" in order_columns:
+                insert_cols.append("instructor_id")
+                insert_vals.append(buyer_id)
+            elif "student_id" in order_columns:
+                insert_cols.append("student_id")
+                insert_vals.append(buyer_id)
+            elif "instructor_id" in order_columns:
+                insert_cols.append("instructor_id")
+                insert_vals.append(buyer_id)
+
+            if "total_amount" in order_columns:
+                insert_cols.append("total_amount")
+                insert_vals.append(total_amount)
+
+            if "status" in order_columns:
+                insert_cols.append("status")
+                insert_vals.append("Pending")
+
+            # Optional but commonly required fields
+            if "payment_method" in order_columns:
+                insert_cols.append("payment_method")
+                insert_vals.append(payment_method)
+            if "delivery_option" in order_columns:
+                insert_cols.append("delivery_option")
+                insert_vals.append(delivery_option)
+            if "delivery_address" in order_columns:
+                insert_cols.append("delivery_address")
+                insert_vals.append(delivery_address)
+
+            if not insert_cols:
+                return jsonify({"error": "Orders table has no compatible columns"}), 500
+
+            placeholders = ", ".join(["%s"] * len(insert_cols))
+            columns_sql = ", ".join(insert_cols)
+            cursor.execute(
+                f"INSERT INTO orders ({columns_sql}) VALUES ({placeholders})",
+                tuple(insert_vals),
+            )
             
             order_id = cursor.lastrowid
             
             # Add order items
-            for item in cart_items:
-                cursor.execute("""
-                    INSERT INTO order_items (order_id, item_id, quantity, price)
-                    VALUES (%s, %s, %s, %s)
-                """, (order_id, item['item_id'], item['quantity'], item['price']))
-            
-            # Clear cart
-            cursor.execute("DELETE FROM cart_items WHERE instructor_id = %s", (session['instructor_id'],))
+            for item in order_items:
+                cursor.execute(
+                    "INSERT INTO order_items (order_id, item_id, quantity, price) VALUES (%s, %s, %s, %s)",
+                    (order_id, item['item_id'], item['quantity'], item['price']),
+                )
+                cursor.execute(
+                    "UPDATE merchandise SET stock = stock - %s WHERE id = %s",
+                    (item['quantity'], item['item_id']),
+                )
             
             # Commit transaction
             conn.commit()
@@ -1395,6 +1998,7 @@ def process_order():
             raise e
             
     except Exception as e:
+        print(f"[process_order ERROR] {e}")
         return jsonify({'error': str(e)}), 500
     finally:
         if 'cursor' in locals():
@@ -1410,7 +2014,7 @@ def admin_dashboard():
         flash('Please log in to access the dashboard.', 'danger')
         return redirect('/')
     
-    if session.get('student_id') != 'ADMIN001' and session.get('course') != 'admin':
+    if not _is_admin():
         flash('Access denied. Admin privileges required.', 'danger')
         return redirect('/')
     
@@ -1422,6 +2026,48 @@ def admin_dashboard():
         # Get student statistics
         cursor.execute("SELECT COUNT(*) as total_students FROM students WHERE course != 'admin'")
         total_students = cursor.fetchone()['total_students']
+
+        # Merchandise stats + listing for the Products Management table (AdminDashboard.html)
+        category_col = _merch_category_column(cursor)
+        cursor.execute("SELECT COUNT(*) AS total_products FROM merchandise")
+        total_products = cursor.fetchone()['total_products']
+
+        cursor.execute("SELECT COUNT(*) AS total_orders FROM orders WHERE NOT (status = 'Completed' AND payment_status = 'Success')")
+        total_orders = cursor.fetchone()['total_orders']
+
+        cursor.execute("SELECT COALESCE(SUM(amount), 0) AS total_revenue FROM payments WHERE status = 'Success'")
+        total_revenue = float(cursor.fetchone()['total_revenue'] or 0)
+
+        cursor.execute(
+            f"""
+            SELECT
+                id,
+                name,
+                price,
+                stock,
+                image_url,
+                {category_col} AS category
+            FROM merchandise
+            ORDER BY id DESC
+            """
+        )
+        products = cursor.fetchall()
+
+        cursor.execute(
+            f"""
+            SELECT
+                id,
+                name,
+                price,
+                stock,
+                image_url,
+                {category_col} AS category
+            FROM merchandise
+            WHERE stock <= 5
+            ORDER BY stock ASC, id DESC
+            """
+        )
+        low_stock_products = cursor.fetchall()
         
         # Get recent users
         cursor.execute("""
@@ -1432,13 +2078,75 @@ def admin_dashboard():
         """)
         recent_users = cursor.fetchall()
         
+        cursor.execute(
+            """
+            SELECT
+                o.id,
+                o.total_amount,
+                LOWER(o.status) AS status,
+                o.created_at,
+                COALESCE(s.first_name, '') AS first_name,
+                COALESCE(s.last_name, o.student_id) AS last_name
+            FROM orders o
+            LEFT JOIN students s ON s.student_id = o.student_id
+            ORDER BY o.created_at DESC
+            LIMIT 10
+            """
+        )
+        recent_orders = cursor.fetchall()
+
+        for order in recent_orders:
+            cursor.execute(
+                """
+                SELECT
+                    oi.quantity,
+                    COALESCE(m.name, 'Unknown item') AS product_name
+                FROM order_items oi
+                LEFT JOIN merchandise m ON m.id = oi.item_id
+                WHERE oi.order_id = %s
+                """,
+                (order["id"],),
+            )
+            order["order_items"] = cursor.fetchall()
+
+        cursor.execute(
+            """
+            SELECT
+                p.id,
+                p.amount,
+                p.payment_method,
+                p.reference_number,
+                p.status,
+                p.payment_date,
+                COALESCE(e.full_name, p.email) AS instructor_name
+            FROM payments p
+            LEFT JOIN educators e ON e.email = p.email
+            ORDER BY p.payment_date DESC
+            LIMIT 10
+            """
+        )
+        recent_payments = cursor.fetchall()
+
+        # Normalize product image URLs
+        for p in products:
+            img = p.get('image_url') or ''
+            if img and not img.startswith('/'):
+                p['image_url'] = f'/static/images/{img}'
+        for p in low_stock_products:
+            img = p.get('image_url') or ''
+            if img and not img.startswith('/'):
+                p['image_url'] = f'/static/images/{img}'
+
         return render_template('AdminDashboard.html',
                             total_students=total_students,
-                            total_products=0,
-                            total_orders=0,
-                            total_revenue=0,
-                            recent_orders=[],
-                            recent_users=recent_users)
+                            total_products=total_products,
+                            total_orders=total_orders,
+                            total_revenue=total_revenue,
+                            products=products,
+                            low_stock_products=low_stock_products,
+                            recent_orders=recent_orders,
+                            recent_users=recent_users,
+                            recent_payments=recent_payments)
         
     except Exception as e:
         flash(f"An error occurred: {e}", 'danger')
@@ -1449,177 +2157,347 @@ def admin_dashboard():
         if 'conn' in locals():
             conn.close()
 
-# Admin Product Management Routes
-@app.route('/admin/products', methods=['GET', 'POST'])
-def admin_edit_products():
-    if 'student_id' not in session:
-        flash('Please log in to access this page.', 'danger')
-        return redirect('/')
-    
-    if session.get('student_id') != 'ADMIN001' and session.get('course') != 'admin':
-        flash('Access denied. Admin privileges required.', 'danger')
-        return redirect('/')
-    
-    if request.method == 'POST':
-        try:
-            name = request.form.get('name')
-            description = request.form.get('description')
-            price = float(request.form.get('price'))
-            stock = int(request.form.get('stock'))
-            category = request.form.get('category')
-            
-            # Handle image upload
-            image = request.files.get('image')
-            image_url = None
-            
-            if image:
-                # Ensure the upload folder exists
-                upload_folder = os.path.join('static', 'uploads', 'products')
-                os.makedirs(upload_folder, exist_ok=True)
-                
-                # Save the image
-                filename = secure_filename(image.filename)
-                image_path = os.path.join(upload_folder, filename)
-                image.save(image_path)
-                image_url = f'/static/uploads/products/{filename}'
-            
-            # Connect to database
-            conn = mysql.connector.connect(**DB_CONFIG)
-            cursor = conn.cursor()
-            
-            # Insert product
-            query = """
-                INSERT INTO products (name, description, price, stock, category, image_url)
-                VALUES (%s, %s, %s, %s, %s, %s)
-                ON DUPLICATE KEY UPDATE description = %s, price = %s, stock = %s, category = %s, image_url = %s
-            """
-            cursor.execute(query, (name, description, price, stock, category, image_url, description, price, stock, category, image_url))
-            conn.commit()
-            
-            # Log admin activity
-            activity_query = """
-                INSERT INTO admin_activity_log (admin_id, action, details)
-                VALUES (%s, %s, %s)
-            """
-            activity_details = f"Added/Updated product: {name} (Category: {category}, Price: ₱{price})"
-            cursor.execute(activity_query, (session['student_id'], 'add_update_product', activity_details))
-            conn.commit()
-            
-            flash('Product added/updated successfully!', 'success')
-            return redirect('/admin/dashboard')
-            
-        except Exception as e:
-            flash(f'Error adding/updating product: {str(e)}', 'danger')
-            return redirect('/admin/products/add')
-        finally:
-            if 'cursor' in locals():
-                cursor.close()
-            if 'conn' in locals():
-                conn.close()
-    
-    return render_template('AdminEditProduct.html')
-
-@app.route('/admin/products/edit', methods=['GET', 'POST'])
-def admin_edit_product():
-    if 'student_id' not in session:
-        flash('Please log in to access this page.', 'danger')
-        return redirect('/')
-
-    if session.get('student_id') != 'ADMIN001' and session.get('course') != 'admin':
+@app.route('/admin/users')
+def admin_users():
+    if not _is_admin():
         flash('Access denied. Admin privileges required.', 'danger')
         return redirect('/')
 
-    if request.method == 'POST':
-        try:
-            product_id = int(request.form.get('product_id'))
-            name = request.form.get('name')
-            price = float(request.form.get('price'))
-            stock = int(request.form.get('stock'))
-            category = request.form.get('category')
-
-            image = request.files.get('image')
-            image_url = None
-
-            if image:
-                upload_folder = os.path.join('static', 'uploads', 'products')
-                os.makedirs(upload_folder, exist_ok=True)
-
-                filename = secure_filename(image.filename)
-                image_path = os.path.join(upload_folder, filename)
-                image.save(image_path)
-                image_url = f'/static/uploads/products/{filename}'
-
-            conn = mysql.connector.connect(**DB_CONFIG)
-            cursor = conn.cursor()
-
-            query = """
-                UPDATE products
-                SET name = %s, price = %s, stock = %s, category = %s, image_url = %s
-                WHERE id = %s
-            """
-            cursor.execute(query, (name, price, stock, category, image_url, product_id))
-            conn.commit()
-
-            activity_query = """
-                INSERT INTO admin_activity_log (admin_id, action, details)
-                VALUES (%s, %s, %s)
-            """
-            activity_details = f"Updated product: {name} (ID: {product_id})"
-            cursor.execute(activity_query, (session['student_id'], 'edit_product', activity_details))
-            conn.commit()
-
-            flash('Product updated successfully!', 'success')
-            return redirect('/admin/products/edit')
-
-        except Exception as e:
-            flash(f'Error updating product: {str(e)}', 'danger')
-            return redirect('/admin/products/edit')
-        finally:
-            if 'cursor' in locals():
-                cursor.close()
-            if 'conn' in locals():
-                conn.close()
-
+    conn = None
+    cursor = None
     try:
         conn = mysql.connector.connect(**DB_CONFIG)
         cursor = conn.cursor(dictionary=True)
-        cursor.execute("SELECT * FROM products")
-        products = cursor.fetchall()
-        return render_template('AdminEditProduct.html', products=products)  # Ensure 'products' is passed
+
+        cursor.execute(
+            """
+            SELECT
+                student_id AS account_id,
+                first_name,
+                last_name,
+                email,
+                course,
+                created_at
+            FROM students
+            WHERE course != 'admin'
+            ORDER BY created_at DESC
+            """
+        )
+        student_users = cursor.fetchall()
+
+        cursor.execute(
+            """
+            SELECT
+                CAST(id AS CHAR) AS account_id,
+                full_name,
+                email,
+                institution,
+                subject,
+                created_at
+            FROM educators
+            ORDER BY created_at DESC
+            """
+        )
+        instructor_users = cursor.fetchall()
+
+        return render_template(
+            'AdminUsers.html',
+            student_users=student_users,
+            instructor_users=instructor_users,
+            total_students=len(student_users),
+            total_instructors=len(instructor_users),
+            total_users=len(student_users) + len(instructor_users),
+        )
     except Exception as e:
         flash(f"An error occurred: {e}", 'danger')
         return redirect('/admin/dashboard')
     finally:
-        if 'cursor' in locals():
+        if cursor:
             cursor.close()
-        if 'conn' in locals():
+        if conn and conn.is_connected():
             conn.close()
 
-@app.route('/admin/products', methods=['GET'])
-def admin_products():
-    # Check if the user is logged in and is an admin
-    if 'student_id' not in session:
-        flash('Please log in to access this page.', 'danger')
-        return redirect('/')
-
-    if session.get('student_id') != 'ADMIN001' and session.get('course') != 'admin':
+@app.route('/admin/orders')
+def admin_orders():
+    if not _is_admin():
         flash('Access denied. Admin privileges required.', 'danger')
         return redirect('/')
 
-    # Fetch all products to display in the admin products page
+    conn = None
+    cursor = None
     try:
         conn = mysql.connector.connect(**DB_CONFIG)
         cursor = conn.cursor(dictionary=True)
-        cursor.execute("SELECT * FROM products")
-        products = cursor.fetchall()
-        return render_template('AdminEditProduct.html', products=products)
+
+        cursor.execute(
+            """
+            SELECT
+                o.id,
+                o.student_id,
+                o.instructor_id,
+                o.total_amount,
+                LOWER(o.status) AS status,
+                o.payment_status,
+                o.payment_method,
+                o.delivery_option,
+                o.delivery_address,
+                o.created_at,
+                COALESCE(s.first_name, '') AS first_name,
+                COALESCE(s.last_name, o.student_id) AS last_name,
+                s.email AS student_email,
+                COALESCE(e.full_name, o.instructor_id) AS instructor_name,
+                e.email AS instructor_email,
+                p.id AS payment_id,
+                p.reference_number AS payment_ref,
+                p.payment_date AS payment_date
+            FROM orders o
+            LEFT JOIN students s ON s.student_id = o.student_id
+            LEFT JOIN educators e ON e.id = o.instructor_id
+            LEFT JOIN payments p ON p.reference_number = CONCAT('ORD-', o.id)
+            WHERE NOT (o.status = 'Completed' AND o.payment_status = 'Success')
+            ORDER BY o.created_at DESC, o.id DESC
+            """
+        )
+        orders = cursor.fetchall()
+
+        for order in orders:
+            cursor.execute(
+                """
+                SELECT
+                    oi.quantity,
+                    oi.price,
+                    COALESCE(m.name, 'Unknown item') AS product_name
+                FROM order_items oi
+                LEFT JOIN merchandise m ON m.id = oi.item_id
+                WHERE oi.order_id = %s
+                """,
+                (order["id"],),
+            )
+            order["order_items"] = cursor.fetchall()
+
+        # Count successful payments from payments table
+        cursor.execute(
+            "SELECT COUNT(*) AS count FROM payments WHERE status = 'Success'"
+        )
+        successful_payments_count = cursor.fetchone()['count']
+
+        # Fetch all payments for the payments section
+        cursor.execute(
+            """
+            SELECT
+                p.id,
+                p.email,
+                p.amount,
+                p.payment_method,
+                p.reference_number,
+                p.status,
+                p.payment_date
+            FROM payments p
+            ORDER BY p.payment_date DESC, p.id DESC
+            """
+        )
+        payments = cursor.fetchall()
+
+        return render_template('AdminOrders.html', orders=orders, payments=payments, successful_payments_count=successful_payments_count)
     except Exception as e:
         flash(f"An error occurred: {e}", 'danger')
         return redirect('/admin/dashboard')
     finally:
-        if 'cursor' in locals():
+        if cursor:
             cursor.close()
-        if 'conn' in locals():
+        if conn and conn.is_connected():
+            conn.close()
+
+@app.route('/admin/payments')
+def admin_payments():
+    if not _is_admin():
+        flash('Access denied. Admin privileges required.', 'danger')
+        return redirect('/')
+
+    conn = None
+    cursor = None
+    try:
+        conn = mysql.connector.connect(**DB_CONFIG)
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute(
+            """
+            SELECT
+                p.id,
+                p.email,
+                p.amount,
+                p.payment_method,
+                p.reference_number,
+                p.status,
+                p.payment_date,
+                o.id AS order_id,
+                COALESCE(s.first_name, '') AS first_name,
+                COALESCE(s.last_name, o.student_id) AS last_name,
+                COALESCE(e.full_name, o.instructor_id) AS instructor_name
+            FROM payments p
+            LEFT JOIN orders o ON CONCAT('ORD-', o.id) = p.reference_number
+            LEFT JOIN students s ON s.student_id = o.student_id
+            LEFT JOIN educators e ON e.id = o.instructor_id
+            ORDER BY p.payment_date DESC, p.id DESC
+            """
+        )
+        payments = cursor.fetchall()
+
+        # Stats
+        total_payments = len(payments)
+        success_count = sum(1 for p in payments if p.get('status') == 'Success')
+        pending_count = sum(1 for p in payments if p.get('status') == 'Pending')
+        total_revenue = sum(p.get('amount', 0) for p in payments if p.get('status') == 'Success')
+
+        return render_template('AdminPayments.html', payments=payments, total_payments=total_payments, success_count=success_count, pending_count=pending_count, total_revenue=total_revenue)
+    except Exception as e:
+        flash(f"An error occurred: {e}", 'danger')
+        return redirect('/admin/dashboard')
+    finally:
+        if cursor:
+            cursor.close()
+        if conn and conn.is_connected():
+            conn.close()
+
+# Admin Product Management Routes
+@app.route('/admin/products', methods=['GET', 'POST'])
+def admin_products():
+    if not _is_admin():
+        flash('Access denied. Admin privileges required.', 'danger')
+        return redirect('/')
+
+    # POST handles both "add" and "edit" coming from AdminDashboard.html modals.
+    if request.method == 'POST':
+        conn = None
+        cursor = None
+        try:
+            product_id_raw = request.form.get('product_id')
+            name = (request.form.get('name') or '').strip()
+            description = (request.form.get('description') or '').strip()
+            price = float(request.form.get('price') or 0)
+            stock = int(request.form.get('stock') or 0)
+            category = (request.form.get('category') or '').strip()
+
+            if not name or price < 0 or stock < 0 or not category:
+                flash('Please provide valid product details.', 'danger')
+                return redirect('/admin/dashboard')
+
+            # Handle image upload (optional on edit, required on add in the template)
+            image = request.files.get('image')
+            image_url = None
+            if image and image.filename:
+                upload_folder = os.path.join('static', 'uploads', 'products')
+                os.makedirs(upload_folder, exist_ok=True)
+                filename = secure_filename(image.filename)
+                image_path = os.path.join(upload_folder, filename)
+                image.save(image_path)
+                image_url = f'/static/uploads/products/{filename}'
+
+            conn = mysql.connector.connect(**DB_CONFIG)
+            cursor = conn.cursor(dictionary=True)
+            category_col = _merch_category_column(cursor)
+
+            if product_id_raw:
+                # Update existing merchandise item
+                product_id = int(product_id_raw)
+                if image_url:
+                    cursor.execute(
+                        f"""
+                        UPDATE merchandise
+                        SET name=%s, description=%s, price=%s, stock=%s, {category_col}=%s, image_url=%s
+                        WHERE id=%s
+                        """,
+                        (name, description, price, stock, category, image_url, product_id),
+                    )
+                else:
+                    cursor.execute(
+                        f"""
+                        UPDATE merchandise
+                        SET name=%s, description=%s, price=%s, stock=%s, {category_col}=%s
+                        WHERE id=%s
+                        """,
+                        (name, description, price, stock, category, product_id),
+                    )
+                conn.commit()
+                flash('Merchandise item updated successfully!', 'success')
+                return redirect('/admin/dashboard')
+
+            # Add new merchandise item
+            cursor.execute(
+                f"""
+                INSERT INTO merchandise (name, description, price, stock, {category_col}, image_url)
+                VALUES (%s, %s, %s, %s, %s, %s)
+                """,
+                (name, description, price, stock, category, image_url),
+            )
+            conn.commit()
+            flash('Merchandise item added successfully!', 'success')
+            return redirect('/admin/dashboard')
+        except Exception as e:
+            flash(f'Error saving merchandise item: {str(e)}', 'danger')
+            return redirect('/admin/dashboard')
+        finally:
+            if cursor:
+                cursor.close()
+            if conn and conn.is_connected():
+                conn.close()
+
+    # GET: dedicated admin products section/page
+    conn = None
+    cursor = None
+    try:
+        conn = mysql.connector.connect(**DB_CONFIG)
+        cursor = conn.cursor(dictionary=True)
+        category_col = _merch_category_column(cursor)
+        cursor.execute(
+            f"""
+            SELECT
+                id,
+                name,
+                description,
+                price,
+                stock,
+                image_url,
+                {category_col} AS category
+            FROM merchandise
+            ORDER BY id DESC
+            """
+        )
+        products = cursor.fetchall()
+        total_products = len(products)
+        low_stock_count = sum(1 for p in products if p['stock'] <= 5)
+        total_categories = len(set(p['category'] for p in products if p['category']))
+        return render_template('AdminProducts.html', products=products, total_products=total_products, low_stock_count=low_stock_count, total_categories=total_categories)
+    except Exception as e:
+        flash(f"An error occurred: {e}", 'danger')
+        return redirect('/admin/dashboard')
+    finally:
+        if cursor:
+            cursor.close()
+        if conn and conn.is_connected():
+            conn.close()
+
+@app.route('/admin/products/<int:product_id>/delete', methods=['POST'])
+def admin_delete_product(product_id: int):
+    if not _is_admin():
+        flash('Access denied. Admin privileges required.', 'danger')
+        return redirect('/')
+
+    conn = None
+    cursor = None
+    try:
+        conn = mysql.connector.connect(**DB_CONFIG)
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM merchandise WHERE id=%s", (product_id,))
+        conn.commit()
+        flash('Merchandise item deleted.', 'success')
+        return redirect('/admin/dashboard')
+    except Exception as e:
+        flash(f'Error deleting item: {e}', 'danger')
+        return redirect('/admin/dashboard')
+    finally:
+        if cursor:
+            cursor.close()
+        if conn and conn.is_connected():
             conn.close()
 
 @app.route('/forgot_password', methods=['POST'])
@@ -1771,11 +2649,48 @@ def clear_signup_success():
 def my_purchases():
     try:
         student_id = session.get('student_id')
+        if not student_id:
+            flash('Please log in to view your purchases.', 'warning')
+            return redirect(url_for('index'))
+
         first_name = session.get('first_name', 'Student')
         user_initials = ''.join([name[0].upper() for name in first_name.split() if name])
-        # Fetch purchases from DB if needed, e.g.:
-        # purchases = get_purchases_for_student(student_id)
-        purchases = []  # Replace with actual data
+
+        conn = mysql.connector.connect(**DB_CONFIG)
+        cursor = conn.cursor(dictionary=True)
+
+        # Show purchases for this student (orders + order_items + merchandise).
+        query = """
+            SELECT 
+                o.id AS order_id,
+                o.total_amount,
+                o.status,
+                o.payment_status,
+                o.payment_method,
+                o.created_at,
+                oi.quantity,
+                oi.price,
+                m.name AS item_name,
+                m.image_url,
+                (SELECT p.reference_number FROM payments p WHERE p.reference_number = CONCAT('ORD-', o.id) LIMIT 1) AS reference_number
+            FROM orders o
+            LEFT JOIN order_items oi ON o.id = oi.order_id
+            LEFT JOIN merchandise m ON oi.item_id = m.id
+            WHERE o.student_id = %s
+            ORDER BY o.created_at DESC, o.id DESC
+        """
+        cursor.execute(query, (student_id,))
+        purchases = cursor.fetchall()
+
+        # Normalize image URLs to full static paths
+        for row in purchases:
+            img = row.get('image_url') or ''
+            if img and not img.startswith('/'):
+                row['image_url'] = f'/static/images/{img}'
+
+        cursor.close()
+        conn.close()
+
         return render_template(
             'MyPurchases.html',
             student_id=student_id,
@@ -1787,13 +2702,57 @@ def my_purchases():
         flash('Could not load purchases.', 'danger')
         return redirect(url_for('index'))
 
+
+@app.route('/orders/<int:order_id>/refund', methods=['POST'])
+def request_refund(order_id: int):
+    try:
+        student_id = session.get('student_id')
+        if not student_id:
+            flash('Please log in to request a refund.', 'warning')
+            return redirect(url_for('index'))
+
+        conn = mysql.connector.connect(**DB_CONFIG)
+        cursor = conn.cursor(dictionary=True)
+
+        # Ensure the order belongs to this student
+        cursor.execute(
+            "SELECT id, payment_status FROM orders WHERE id = %s AND student_id = %s",
+            (order_id, student_id),
+        )
+        order = cursor.fetchone()
+        if not order:
+            flash('Order not found.', 'danger')
+            return redirect(url_for('my_purchases'))
+
+        payment_status = (order.get('payment_status') or 'Pending')
+        if payment_status in {'Success', 'Refunded'}:
+            flash('This order is not eligible for refund.', 'warning')
+            return redirect(url_for('my_purchases'))
+
+        # Mark as refund requested
+        cursor.execute(
+            "UPDATE orders SET payment_status = 'Refund Requested' WHERE id = %s",
+            (order_id,),
+        )
+        conn.commit()
+        flash('Refund request submitted. Please wait for confirmation.', 'success')
+        return redirect(url_for('my_purchases'))
+    except Exception as e:
+        flash(f'Could not request refund: {e}', 'danger')
+        return redirect(url_for('my_purchases'))
+    finally:
+        if 'cursor' in locals():
+            cursor.close()
+        if 'conn' in locals():
+            conn.close()
+
 @app.route('/instructor/my_purchases')
 def instructor_my_purchases():
     try:
         # Check if instructor is logged in
         if 'email' not in session:
             flash('Please log in to access the dashboard.', 'warning')
-            return redirect(url_for('instructor_login'))
+            return redirect('/')
 
         instructor_email = session.get('email')
         
@@ -1801,18 +2760,64 @@ def instructor_my_purchases():
         conn = mysql.connector.connect(**DB_CONFIG)
         cursor = conn.cursor(dictionary=True)
         
-        # Execute query using instructor's email
+        # Query orders table for instructor purchases (process_order stores here)
         query = """
-            SELECT o.id AS order_id, o.total_amount, o.status, o.created_at,
-                   oi.item_id, oi.quantity, oi.price, m.name AS item_name
+            SELECT 
+                o.id AS order_id,
+                o.total_amount,
+                o.payment_status,
+                o.status,
+                o.payment_method,
+                o.delivery_option,
+                o.delivery_address,
+                o.created_at,
+                oi.quantity,
+                oi.price,
+                m.name AS item_name,
+                m.image_url,
+                (SELECT p.reference_number FROM payments p WHERE p.reference_number = CONCAT('ORD-', o.id) LIMIT 1) AS reference_number
             FROM orders o
             LEFT JOIN order_items oi ON o.id = oi.order_id
             LEFT JOIN merchandise m ON oi.item_id = m.id
-            WHERE o.email = %s  
-            ORDER BY o.created_at DESC
+            WHERE o.instructor_id = %s
+            ORDER BY o.created_at DESC, o.id DESC
         """
-        cursor.execute(query, (instructor_email,))
-        purchases = cursor.fetchall()
+        cursor.execute(query, (session.get('instructor_id'),))
+        rows = cursor.fetchall()
+
+        # Group rows by order for template rendering
+        purchases = []
+        order_map = {}
+        for row in rows:
+            oid = row['order_id']
+            if oid not in order_map:
+                order_map[oid] = {
+                    'order_id': oid,
+                    'total_amount': float(row['total_amount'] or 0),
+                    'status': row['status'],
+                    'payment_status': row['payment_status'],
+                    'payment_method': row['payment_method'],
+                    'delivery_option': row['delivery_option'],
+                    'delivery_address': row['delivery_address'],
+                    'created_at': row['created_at'],
+                    'reference_number': row.get('reference_number') or '',
+                    'image_url': '',
+                    'order_items': []
+                }
+            if row['item_name']:
+                img = row.get('image_url') or ''
+                if img and not img.startswith('/'):
+                    img = f'/static/images/{img}'
+                order_map[oid]['order_items'].append({
+                    'name': row['item_name'],
+                    'quantity': row['quantity'],
+                    'price': float(row['price'] or 0),
+                    'image_url': img
+                })
+                # Use first item's image for the order card
+                if not order_map[oid]['image_url']:
+                    order_map[oid]['image_url'] = img
+        purchases = list(order_map.values())
 
         cursor.close()
         conn.close()
@@ -1821,14 +2826,14 @@ def instructor_my_purchases():
         full_name = session.get('full_name', 'Instructor')
         user_initials = ''.join([name[0].upper() for name in full_name.split() if name])
 
-        return render_template('InstructorMyPurchases.html',  
+        return render_template('InstructorMyPurchases.html',
                        purchases=purchases,
                        full_name=full_name,
                        user_initials=user_initials)
     except Exception as e:
         print(f"Database error: {str(e)}")
         flash(f"An error occurred: {e}", 'danger')
-        return redirect(url_for('instructor_login'))
+        return redirect('/')
 
 @app.route('/some_route')
 def some_route():
@@ -1883,5 +2888,83 @@ def chrome_devtools():
 @app.route('/visual-aid')
 def visual_aid():
     return render_template('VisualAid.html')
+def _ensure_schema():
+    """Auto-migrate: ensure cart_items and orders support instructors."""
+    conn = None
+    cursor = None
+    try:
+        conn = mysql.connector.connect(**DB_CONFIG)
+        cursor = conn.cursor()
+
+        # Ensure cart_items table exists with both student_id and instructor_id
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS cart_items (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                student_id VARCHAR(50) NULL,
+                instructor_id INT NULL,
+                item_id INT NOT NULL,
+                quantity INT NOT NULL DEFAULT 1,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                UNIQUE KEY uq_cart_student_item (student_id, item_id),
+                UNIQUE KEY uq_cart_instructor_item (instructor_id, item_id),
+                FOREIGN KEY (item_id) REFERENCES merchandise(id) ON DELETE CASCADE
+            )
+        """)
+
+        # If table already existed without instructor_id, add it
+        cursor.execute("""
+            SELECT COUNT(*) FROM information_schema.columns
+            WHERE table_schema = DATABASE()
+              AND table_name = 'cart_items'
+              AND column_name = 'instructor_id'
+        """)
+        if cursor.fetchone()[0] == 0:
+            cursor.execute("""
+                ALTER TABLE cart_items
+                ADD COLUMN instructor_id INT NULL AFTER student_id,
+                ADD UNIQUE KEY uq_cart_instructor_item (instructor_id, item_id)
+            """)
+
+        # Ensure orders table can store instructor purchases
+        cursor.execute("""
+            SELECT COUNT(*) FROM information_schema.columns
+            WHERE table_schema = DATABASE()
+              AND table_name = 'orders'
+              AND column_name = 'instructor_id'
+        """)
+        if cursor.fetchone()[0] == 0:
+            cursor.execute("""
+                ALTER TABLE orders
+                ADD COLUMN instructor_id INT NULL AFTER student_id
+            """)
+
+        # Make student_id nullable so instructors can place orders without it
+        cursor.execute("""
+            SELECT is_nullable FROM information_schema.columns
+            WHERE table_schema = DATABASE()
+              AND table_name = 'orders'
+              AND column_name = 'student_id'
+        """)
+        row = cursor.fetchone()
+        if row and row[0] == 'NO':
+            cursor.execute("""
+                ALTER TABLE orders
+                MODIFY COLUMN student_id VARCHAR(50) NULL
+            """)
+
+        conn.commit()
+    except Exception as e:
+        print(f"Schema migration warning (non-fatal): {e}")
+    finally:
+        if cursor:
+            cursor.close()
+        if conn and conn.is_connected():
+            conn.close()
+
+
+# Run lightweight schema check once at import time
+_ensure_schema()
+
 if __name__ == '__main__':
     app.run(debug=True, port=5000)

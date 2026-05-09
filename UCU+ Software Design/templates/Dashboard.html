@@ -65,7 +65,7 @@
                     </div>
                     <div class="meta-item">
                         <div class="meta-label">Academic Year</div>
-                        <div class="meta-value">2024-2025</div>
+                        <div class="meta-value">2025-2026</div>
                     </div>
                     <div class="meta-item">
                         <div class="meta-label">Passed grades</div>
@@ -2116,7 +2116,8 @@
             window.addEventListener('hashchange', updateActiveNavItem);
 
             // Handle logout with success message
-            document.querySelector('a[href="/logout"]').addEventListener('click', function(e) {
+            const logoutLink = document.querySelector('a[href="/logout"]');
+            if (logoutLink) logoutLink.addEventListener('click', function(e) {
                 e.preventDefault(); // Prevent default link behavior
                 
                 // Create and show success message
@@ -2158,7 +2159,7 @@
         const searchBar = document.getElementById('searchBar');
         const tableRows = document.querySelectorAll('.grades-table tbody tr');
     
-        searchBar.addEventListener('input', () => {
+        if (searchBar) searchBar.addEventListener('input', () => {
             const query = searchBar.value.toLowerCase();
     
             tableRows.forEach(row => {
@@ -2401,6 +2402,95 @@ document.addEventListener('DOMContentLoaded', function() {
             // Save to localStorage for cross-page persistence
             localStorage.setItem('activeNavItem', this.getAttribute('href'));
         });
+    });
+});
+</script>
+<script>
+document.addEventListener('DOMContentLoaded', async function () {
+    const departmentsEl = document.querySelector('.departments');
+    const searchInput = document.getElementById('searchInput');
+    const sortSelect = document.getElementById('sortSelect');
+    if (!departmentsEl) return;
+
+    function imageFilenameFromUrl(url) {
+        if (!url) return '';
+        const parts = String(url).split('/');
+        return parts[parts.length - 1];
+    }
+
+    function cardHtml(item) {
+        const category = String(item.category || '').toLowerCase();
+        const selectHtml = (category.includes('shirt') || category.includes('bundle'))
+            ? `<select>
+                <option>Select Size</option>
+                <option>Small</option><option>Medium</option><option>Large</option><option>X-Large</option><option>2X-Large</option>
+               </select>`
+            : `<select>
+                <option>Quantity</option>
+                <option>1</option><option>2</option><option>3</option><option>4</option><option>5</option>
+               </select>`;
+
+        return `
+            <div class="dept-card" data-name="${(item.name || '').toLowerCase()}" data-category="${category}">
+                <img src="${item.image_url || ''}" alt="${item.name || 'Item'}">
+                <div class="dept-name">${item.name || 'Unnamed Item'}</div>
+                <p>${item.description || 'No description available.'}</p>
+                <p class="price">₱${Number(item.price || 0).toFixed(2)}</p>
+                ${selectHtml}
+                <button class="add-to-cart" data-item='${JSON.stringify({
+                    name: item.name,
+                    price: Number(item.price || 0),
+                    image: imageFilenameFromUrl(item.image_url)
+                })}'>Add to Cart</button>
+            </div>
+        `;
+    }
+
+    try {
+        const response = await fetch('/api/merchandise');
+        const items = await response.json();
+        if (Array.isArray(items) && items.length) {
+            departmentsEl.innerHTML = items.map(cardHtml).join('');
+        }
+    } catch (error) {
+        console.error('Failed to load merchandise:', error);
+    }
+
+    function applyFilters() {
+        const query = (searchInput?.value || '').toLowerCase();
+        const selectedType = (sortSelect?.value || 'all').toLowerCase();
+        document.querySelectorAll('.dept-card').forEach((item) => {
+            const name = item.dataset.name || '';
+            const category = item.dataset.category || '';
+            const matchesSearch = name.includes(query);
+            const matchesType = selectedType === 'all' || category.includes(selectedType);
+            item.style.display = (matchesSearch && matchesType) ? 'block' : 'none';
+        });
+    }
+
+    if (searchInput) searchInput.addEventListener('input', applyFilters);
+    if (sortSelect) sortSelect.addEventListener('change', applyFilters);
+
+    document.addEventListener('click', function (event) {
+        const button = event.target.closest('.add-to-cart');
+        if (!button) return;
+        const quantitySelect = button.previousElementSibling;
+        const quantity = parseInt(quantitySelect?.value, 10) || 1;
+        const size = quantitySelect?.querySelector('option:checked')?.textContent || '';
+        const item = JSON.parse(button.getAttribute('data-item') || '{}');
+        const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+        const existingItem = cart.find((cartItem) => cartItem.name === item.name && (!cartItem.size || cartItem.size === size));
+        if (existingItem) {
+            existingItem.quantity += quantity;
+        } else {
+            cart.push({
+                ...item,
+                quantity,
+                size: size !== 'Select Size' && size !== 'Quantity' ? size : undefined
+            });
+        }
+        localStorage.setItem('cart', JSON.stringify(cart));
+        window.location.href = '/payment';
     });
 });
 </script>

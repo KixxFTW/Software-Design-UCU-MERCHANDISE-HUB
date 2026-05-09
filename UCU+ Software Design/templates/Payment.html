@@ -795,10 +795,34 @@
             }
         });
 
+        // Notifications (global so async functions can use it)
+        window.showNotification = function(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.textContent = message;
+            document.body.appendChild(notification);
+
+            notification.style.position = 'fixed';
+            notification.style.bottom = '20px';
+            notification.style.right = '20px';
+            notification.style.backgroundColor = type === 'success' ? '#4caf50' : (type === 'error' ? '#f44336' : 'var(--primary)');
+            notification.style.color = 'white';
+            notification.style.padding = '15px 25px';
+            notification.style.borderRadius = '5px';
+            notification.style.boxShadow = '0 2px 5px rgba(0,0,0,0.2)';
+            notification.style.zIndex = '1000';
+            notification.style.animation = 'slideIn 0.5s ease-out';
+
+            setTimeout(() => {
+                notification.style.animation = 'slideOut 0.5s ease-in';
+                setTimeout(() => notification.remove(), 500);
+            }, 3000);
+        };
+
         // Checkout button
         const checkoutBtn = document.querySelector('.checkout-btn');
 
-        checkoutBtn.addEventListener('click', function (event) {
+        if (checkoutBtn) checkoutBtn.addEventListener('click', function (event) {
             // Prevent form submission if fields are invalid
             const recipientName = document.getElementById('recipient-name').value.trim();
             const recipientPhone = document.getElementById('recipient-phone').value.trim();
@@ -919,31 +943,7 @@
                 });
             }
 
-            // Function to show notification
-            function showNotification(message) {
-                const notification = document.createElement('div');
-                notification.className = 'notification';
-                notification.textContent = message;
-                document.body.appendChild(notification);
-
-                // Add styles for the notification
-                notification.style.position = 'fixed';
-                notification.style.bottom = '20px';
-                notification.style.right = '20px';
-                notification.style.backgroundColor = 'var(--primary)';
-                notification.style.color = 'white';
-                notification.style.padding = '15px 25px';
-                notification.style.borderRadius = '5px';
-                notification.style.boxShadow = '0 2px 5px rgba(0,0,0,0.2)';
-                notification.style.zIndex = '1000';
-                notification.style.animation = 'slideIn 0.5s ease-out';
-
-                // Remove notification after 3 seconds
-                setTimeout(() => {
-                    notification.style.animation = 'slideOut 0.5s ease-in';
-                    setTimeout(() => notification.remove(), 500);
-                }, 3000);
-            }
+            // `showNotification` is defined globally above for reuse.
 
             // Add styles for notification animations
             const style = document.createElement('style');

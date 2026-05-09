@@ -104,29 +104,6 @@
         </div>
     </div>
 
-    <!-- Reset Password Form -->
-    <div id="resetPasswordForm" class="modal">
-        <div class="modal-content">
-            <span class="close-modal">&times;</span>
-            <h2>Reset Password</h2>
-            <form action="/reset_password/{{ user_id }}" method="POST">
-                <div>
-                    <label for="verification_code">Verification Code</label>
-                    <input type="text" id="verification_code" name="verification_code" required>
-                </div>
-                <div>
-                    <label for="new_password">New Password</label>
-                    <input type="password" id="new_password" name="new_password" required>
-                </div>
-                <div>
-                    <label for="confirm_password">Confirm Password</label>
-                    <input type="password" id="confirm_password" name="confirm_password" required>
-                </div>
-                <button type="submit">Reset Password</button>
-            </form>
-        </div>
-    </div>
-
     <div class="content">
         <div class="content-text">
             <h1>ACTIVATING<br><span>POTENTIALS</span></h1>
@@ -160,7 +137,6 @@
                     <h3>Login as Instructor</h3>
                     <div class="social-container">
                         <a href="#" class="social"><i class="fab fa-facebook-f"></i></a>
-                        <a href="/login/google" class="social"><i class="fab fa-google-plus-g"></i></a>
                         <a href="/login/google/instructor" class="social"><i class="fab fa-google"></i></a>
                     </div>
                     <span>or use your email for login</span>
@@ -180,7 +156,6 @@
                     <div class="social-container">
                         <a href="#" class="social"><i class="fab fa-facebook-f"></i></a>
                         <a href="/login/google" class="social"><i class="fab fa-google-plus-g"></i></a>
-                        <a href="/login/google/instructor" class="social"><i class="fab fa-google"></i></a>
                     </div>
                     <span>or use your account</span>
                     <input type="text" name="student_id" placeholder="Student ID" required />
@@ -227,75 +202,6 @@
     </div>
 </footer>
     
-    <!-- Popup Message -->
-    <div id="popup" class="popup-container">
-        <div class="popup-content">
-            <span class="close-btn" onclick="closePopup()">&times;</span>
-            <h3 id="popup-title">Notice</h3>
-            <p id="popup-message"></p>
-            <button onclick="closePopup()">OK</button>
-        </div>
-    </div>
-    <script>
-        const signUpButton = document.getElementById('signUp');
-        const signInButton = document.getElementById('signIn');
-        const container = document.getElementById('auth-container');
-        
-        signUpButton.addEventListener('click', () => {
-            container.classList.add("right-panel-active");
-        });
-        
-        signInButton.addEventListener('click', () => {
-            container.classList.remove("right-panel-active");
-        });
-        
-        // Popup functions
-        function showPopup(message, type = 'info') {
-            const popup = document.getElementById('popup');
-            const popupContent = popup.querySelector('.popup-content');
-            const popupTitle = document.getElementById('popup-title');
-            const popupMessage = document.getElementById('popup-message');
-            
-            // Remove all classes and add the appropriate one
-            popupContent.className = 'popup-content';
-            popupContent.classList.add(type);
-            
-            // Set title based on type
-            if (type === 'success') {
-                popupTitle.textContent = 'Success!';
-            } else if (type === 'error') {
-                popupTitle.textContent = 'Error';
-            } else {
-                popupTitle.textContent = 'Notice';
-            }
-            
-            popupMessage.textContent = message;
-            popup.style.display = 'flex';
-        }
-        
-        function closePopup() {
-            document.getElementById('popup').style.display = 'none';
-        }
-        
-        // Check for URL parameters to show messages
-        window.addEventListener('DOMContentLoaded', () => {
-            const urlParams = new URLSearchParams(window.location.search);
-            const message = urlParams.get('message');
-            const messageType = urlParams.get('type');
-            
-            if (message) {
-                showPopup(message, messageType || 'info');
-            }
-        });
-        
-        // Google login
-        document.querySelectorAll('.social a[href="/login/google"]').forEach(element => {
-            element.addEventListener('click', function(e) {
-                e.preventDefault();
-                window.location.href = '/login/google';
-            });
-        });
-    </script>
     <script>
         function handleGoogleInstructorLogin(googleUser) {
             const id_token = googleUser.getAuthResponse().id_token;
@@ -461,17 +367,6 @@
             }
         });
     });
-    </script>
-    <script>
-        // Check for flash messages
-        {% for category, message in messages %}
-        Swal.fire({
-            title: '{{ category|capitalize }}!',
-            text: '{{ message }}',
-            icon: '{{ 'success' if category == 'success' else 'error' }}',
-            confirmButtonText: 'OK'
-        });
-        {% endfor %}
     </script>
     <script>
 document.addEventListener('DOMContentLoaded', function() {

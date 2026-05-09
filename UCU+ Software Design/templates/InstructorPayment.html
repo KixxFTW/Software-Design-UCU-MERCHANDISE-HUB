@@ -837,7 +837,9 @@
                 const data = await response.json();
                 if (data.success) {
                     showNotification('Order processed successfully!', 'success');
-                    updateCartDisplay();
+                    setTimeout(() => {
+                        window.location.href = '/instructor/my_purchases';
+                    }, 1200);
                 } else {
                     showNotification(data.error, 'error');
                 }
@@ -876,7 +878,8 @@
             });
             
             // Add event listener for checkout button
-            document.querySelector('.checkout-btn').addEventListener('click', processOrder);
+            const checkoutBtn = document.querySelector('.checkout-btn');
+            if (checkoutBtn) checkoutBtn.addEventListener('click', processOrder);
         });
 
         document.addEventListener('DOMContentLoaded', function() {

@@ -14,10 +14,11 @@
     <div class="container">
         <div class="sidebar">
             <div class="logo">
-                <h1><img src="{{ url_for('static', filename='images/UCULOGO.png') }}" alt="Logo"><br>UCU+ INSTRUCTOR PORTAL</h1>
+                <img src="{{ url_for('static', filename='images/UCULOGO.png') }}" alt="Logo">
+                <h1>UCU+ INSTRUCTOR</h1>
             </div>
             <a href="{{ url_for('instructor_dashboard') }}" class="nav-item"><i class="material-icons">dashboard</i><span>Dashboard</span></a>
-            <a href="{{ url_for('instructor_dashboard') }}#weekly-schedule" class="nav-item"><i class="material-icons">schedule</i><span>Weekly Schedule</span></a>
+            <a href="{{ url_for('instructor_dashboard') }}#weekly-schedule" class="nav-item"><i class="material-icons">schedule</i><span>Schedule</span></a>
             <a href="{{ url_for('instructor_dashboard') }}#grades-section" class="nav-item"><i class="material-icons">grade</i><span>Grades</span></a>
             <a href="{{ url_for('instructor_dashboard') }}#calendar-section" class="nav-item"><i class="material-icons">event</i><span>Calendar</span></a>
             <a href="{{ url_for('instructor_dashboard') }}#department-shirts" class="nav-item"><i class="material-icons">shopping_cart</i><span>Merch</span></a>
@@ -28,66 +29,101 @@
                 <a href="/logout" class="nav-item logout">
                     <i class="material-icons">logout</i>
                     <span>Logout</span>
-                    <div class="logout-hover-effect"></div>
                 </a>
             </div>
         </div>
 
-        <div class="main-content" id="dashboard">
+        <div class="main-content">
             <div class="header">
-                <h1>My Purchases</h1>
+                <div>
+                    <h1>My Purchases</h1>
+                    <p class="header-subtitle">Manage your merchandise orders</p>
+                </div>
                 <div class="user-info">
-                    <div class="user-avatar" id="userAvatar">{{ user_initials|default("IN") }}</div>
+                    <div class="user-avatar">{{ user_initials|default("IN") }}</div>
                     <div>
-                        <h3>Welcome {{ full_name }}</h3>
+                        <h3>{{ full_name }}</h3>
                         <p>Instructor</p>
                     </div>
                 </div>
             </div>
 
             {% if purchases %}
-            <div class="purchases-table">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Order ID</th>
-                            <th>Item Name</th>
-                            <th>Quantity</th>
-                            <th>Price</th>
-                            <th>Total Amount</th>
-                            <th>Status</th>
-                            <th>Order Date</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for purchase in purchases %}
-                        <tr>
-                            <td>{{ purchase.order_id }}</td>
-                            <td>{{ purchase.item_name or 'N/A' }}</td>
-                            <td>{{ purchase.quantity or 0 }}</td>
-                            <td>₱{{ "%.2f"|format(purchase.price or 0) }}</td>
-                            <td>₱{{ "%.2f"|format(purchase.total_amount or 0) }}</td>
-                            <td>{{ purchase.status or 'Pending' }}</td>
-                            <td>{{ purchase.created_at.strftime('%Y-%m-%d %H:%M') if purchase.created_at else 'N/A' }}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
+                <div class="purchases-grid">
+                    {% for purchase in purchases %}
+                    <div class="purchase-card">
+                        <div class="order-header">
+                            <div class="order-number">
+                                <span class="badge">Order #{{ purchase.order_id }}</span>
+                                <span class="order-date">{{ purchase.created_at|default('N/A') }}</span>
+                            </div>
+                            <span class="status-badge {% if purchase.status == 'completed' %}status-completed{% elif purchase.status == 'processing' %}status-processing{% else %}status-pending{% endif %}">
+                                {{ purchase.status|default('Pending')|title }}
+                            </span>
+                        </div>
+
+                        <div class="product-section">
+                            <div class="product-image">
+                                <img src="{{ purchase.image_url or url_for('static', filename='images/UCULOGO.png') }}" 
+                                     alt="Product">
+                            </div>
+                            <div class="product-details">
+                                {% for item in purchase.order_items %}
+                                <h3>{{ item.name }}</h3>
+                                <div class="quantity-price">
+                                    <span class="quantity"><i class="material-icons">shopping_bag</i> Qty: {{ item.quantity }}</span>
+                                    <span class="unit-price">₱{{ "%.2f"|format(item.price) }} each</span>
+                                </div>
+                                {% else %}
+                                <h3>N/A</h3>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <div class="amount-section">
+                            <div class="amount-row total">
+                                <span class="label">Total Amount:</span>
+                                <span class="value">₱{{ "%.2f"|format(purchase.total_amount|default(0)) }}</span>
+                            </div>
+                        </div>
+
+                        <div class="status-section">
+                            <div class="status-item">
+                                <span class="status-label">Payment</span>
+                                <span class="payment-badge {% if purchase.payment_status == 'Success' %}payment-success{% else %}payment-pending{% endif %}">
+                                    {{ purchase.payment_status|default('Pending') }}
+                                </span>
+                            </div>
+                            <div class="status-item">
+                                <span class="status-label">Method</span>
+                                <span class="status-value">{{ purchase.payment_method|default('N/A') }}</span>
+                            </div>
+                            <div class="status-item">
+                                <span class="status-label">Delivery</span>
+                                <span class="status-value">{{ purchase.delivery_option|default('N/A') }}</span>
+                            </div>
+                            <div class="status-item">
+                                <span class="status-label">Reference #</span>
+                                <span class="status-value">{{ purchase.reference_number or 'N/A' }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
             {% else %}
-            <div class="empty-state">
-            <i class="material-icons empty-cart-icon">shopping_cart</i>
-            <h2>No Purchases Found</h2>
-            <p>You haven't made any purchases yet.</p>
-            <a href="{{ url_for('instructor_dashboard') }}#department-shirts" class="btn btn-primary">
-                Browse Merchandise
-            </a>
-        </div>
+                <div class="empty-state">
+                    <i class="material-icons empty-icon">shopping_cart</i>
+                    <h2>No Purchases Yet</h2>
+                    <p>You haven't made any purchases yet.</p>
+                    <a href="{{ url_for('instructor_dashboard') }}#department-shirts" class="btn btn-primary">
+                        <i class="material-icons">shopping_bag</i> Browse Merchandise
+                    </a>
+                </div>
             {% endif %}
         </div>
     </div>
 
-<style>
+    <style>
         :root {
             --primary: #4a6de5;
             --secondary: #f7f9fc;
@@ -99,6 +135,7 @@
             --success: #4caf50;
             --warning: #ff9800;
             --danger: #f44336;
+            --light: #f5f6fa;
         }
         
         * {
@@ -110,8 +147,8 @@
         
         body {
             color: var(--text);
-            background-color: white;
-            background-size: cover;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
         }
         
         .container {
@@ -122,34 +159,23 @@
         /* Sidebar */
         .sidebar {
             margin-top: 70px;
-            width: 80px; /* Collapsed width */
-            background-color: rgba(255, 255, 255, 0.9);
+            width: 80px;
+            background-color: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(30px);
-            box-shadow: 2px 0 5px rgba(0, 0, 0, 0.05);
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.08);
             padding: 20px 0;
             position: fixed;
             height: 100vh;
             overflow-y: auto;
             z-index: 100;
-            transition: width 0.3s ease; /* Smooth transition */
+            transition: width 0.3s ease;
         }
 
         .sidebar:hover {
-            width: 250px; /* Expanded width */
+            width: 250px;
         }
-        .sidebar img {
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-        }
-        .sidebar h1 {
-            font-size: 24px;
-            color: var(--primary);
-            margin-left: 200px;
-            display: none; /* Hide text when collapsed */
-        }
+
         .sidebar .logo {
-            width:10px;
             height: 70px;
             padding: 0 20px 20px;
             border-bottom: 1px solid var(--border);
@@ -161,15 +187,21 @@
             text-align: center;
         }
 
+        .sidebar .logo img {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+        }
+
         .sidebar .logo h1 {
-            font-size: 16px;
+            font-size: 14px;
             color: var(--primary);
             margin-top: 10px;
-            display: none; /* Hide text when collapsed */
+            display: none;
         }
 
         .sidebar:hover .logo h1 {
-            display: block; /* Show text when expanded */
+            display: block;
         }
 
         .sidebar .nav-item {
@@ -186,228 +218,386 @@
 
         .sidebar .nav-item i {
             margin-right: 10px;
-            font-size: 18px;
+            font-size: 20px;
         }
 
         .sidebar .nav-item span {
-            display: none; /* Hide text when collapsed */
+            display: none;
         }
 
         .sidebar:hover .nav-item span {
-            display: inline; /* Show text when expanded */
+            display: inline;
         }
 
-        .sidebar .nav-item:hover, .sidebar .nav-item.active {
+        .sidebar .nav-item:hover,
+        .sidebar .nav-item.active {
             background-color: var(--secondary);
             color: var(--primary);
             border-left: 3px solid var(--primary);
         }
+
+        .sidebar-footer {
+            margin-top: auto;
+            padding-top: 20px;
+            border-top: 1px solid var(--border);
+        }
+
         /* Main Content */
         .main-content {
             flex: 1;
-            text-align:center;
             margin-left: 250px;
-            padding: 20px;
-            background-color: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            border-radius: 10px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            padding: 30px;
+            overflow-y: auto;
         }
-        
+
         .header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 30px;
-            background-color: rgba(255, 255, 255, 0.8);
-            backdrop-filter: blur(5px);
-            padding: 15px;
-            border-radius: 10px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            margin-bottom: 40px;
+            background: white;
+            padding: 25px 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
         }
-        
+
+        .header h1 {
+            color: var(--primary);
+            font-size: 28px;
+            margin-bottom: 5px;
+        }
+
+        .header-subtitle {
+            color: var(--light-text);
+            font-size: 14px;
+        }
+
         .user-info {
             display: flex;
             align-items: center;
+            gap: 15px;
         }
-        
+
         .user-avatar {
-            width: 40px;
-            height: 40px;
+            width: 50px;
+            height: 50px;
             border-radius: 50%;
-            background-color: var(--primary);
+            background: linear-gradient(135deg, var(--primary), var(--accent));
             color: white;
             display: flex;
             align-items: center;
             justify-content: center;
             font-weight: bold;
-            margin-right: 10px;
-            font-size: 16px;
-        }
-        .empty-state {
-            text-align: center;
-            padding: 40px 20px;
-            background: #fff;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            font-size: 18px;
         }
 
-        .empty-state img {
-            width: 150px;
+        .user-info h3 {
+            font-size: 16px;
+            color: var(--text);
+        }
+
+        .user-info p {
+            font-size: 13px;
+            color: var(--light-text);
+        }
+
+        /* Purchases Grid */
+        .purchases-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+            gap: 25px;
+        }
+
+        /* Purchase Card */
+        .purchase-card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .purchase-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        }
+
+        .order-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px;
+            background: linear-gradient(135deg, var(--light) 0%, rgba(74, 109, 229, 0.05) 100%);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .order-number {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .badge {
+            font-weight: 600;
+            color: var(--primary);
+            font-size: 14px;
+        }
+
+        .order-date {
+            font-size: 12px;
+            color: var(--light-text);
+        }
+
+        .status-badge {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .status-completed {
+            background-color: #d4edda;
+            color: #155724;
+        }
+
+        .status-processing {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+
+        .status-pending {
+            background-color: #f0f0f0;
+            color: #666;
+        }
+
+        /* Product Section */
+        .product-section {
+            display: flex;
+            gap: 20px;
+            padding: 20px;
+            background: var(--light);
+        }
+
+        .product-image {
+            width: 120px;
+            height: 120px;
+            border-radius: 8px;
+            overflow: hidden;
+            flex-shrink: 0;
+            background: white;
+            border: 1px solid var(--border);
+        }
+
+        .product-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .product-details {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .product-details h3 {
+            font-size: 16px;
+            color: var(--text);
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+
+        .quantity-price {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .quantity,
+        .unit-price {
+            display: flex;
+            align-items: center;
+            font-size: 13px;
+            color: var(--light-text);
+        }
+
+        .quantity i {
+            font-size: 16px;
+            margin-right: 5px;
+            color: var(--primary);
+        }
+
+        /* Amount Section */
+        .amount-section {
+            padding: 15px 20px;
+            border-top: 1px solid var(--border);
+        }
+
+        .amount-row {
+            display: flex;
+            justify-content: space-between;
+            font-weight: 600;
+            font-size: 15px;
+            color: var(--primary);
+        }
+
+        .amount-row .label {
+            color: var(--light-text);
+        }
+
+        .amount-row .value {
+            color: var(--primary);
+            font-size: 18px;
+        }
+
+        /* Status Section */
+        .status-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 15px;
+            padding: 20px;
+            background: var(--light);
+        }
+
+        .status-item {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .status-label {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: var(--light-text);
+        }
+
+        .status-value {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .payment-badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+            text-align: center;
+            width: fit-content;
+        }
+
+        .payment-success {
+            background-color: #d4edda;
+            color: #155724;
+        }
+
+        .payment-pending {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 80px 40px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+        }
+
+        .empty-icon {
+            font-size: 80px;
+            color: var(--primary);
+            opacity: 0.3;
             margin-bottom: 20px;
         }
 
         .empty-state h2 {
-            color: #333;
+            color: var(--text);
             margin-bottom: 10px;
+            font-size: 24px;
         }
 
         .empty-state p {
-            color: #666;
-            margin-bottom: 20px;
+            color: var(--light-text);
+            margin-bottom: 30px;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+        }
+
+        .btn i {
+            font-size: 18px;
         }
 
         .btn-primary {
-            background-color: #4a6de5;
+            background-color: var(--primary);
             color: white;
-            padding: 10px 20px;
-            border-radius: 5px;
-            text-decoration: none;
-            transition: background-color 0.3s;
         }
 
         .btn-primary:hover {
             background-color: #3557d8;
+            transform: translateY(-2px);
         }
 
-    .empty-state {
-        margin-top: 40px;
-        padding: 40px;
-        background: white;
-        border-radius: 10px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    }
-
-    .empty-state img {
-        width: 150px;
-        margin-bottom: 20px;
-    }
-
-    .empty-state h2 {
-        color: #333;
-        margin-bottom: 10px;
-    }
-
-    .empty-state p {
-        color: #666;
-        margin-bottom: 20px;
-    }
-
-    .btn-primary {
-        background-color: #4a6de5;
-        color: white;
-        padding: 10px 20px;
-        border-radius: 5px;
-        text-decoration: none;
-        transition: background-color 0.3s;
-    }
-
-    .btn-primary:hover {
-        background-color: #3557d8;
-    }
-
-    .empty-cart-icon {
-        font-size: 64px !important;
-        color: var(--primary);
-        margin-bottom: 20px;
-        opacity: 0.7;
-    }
-
-    .disclaimer {
-        position: fixed;
-        bottom: 0;
-        left: 250px;
-        right: 0;
-        text-align: center;
-        padding: 10px;
-        background-color: rgba(255, 255, 255, 0.9);
-        backdrop-filter: blur(5px);
-        font-size: 12px;
-        color: var(--light-text);
-        border-top: 1px solid var(--border);
-        z-index: 99;
-    }
-
-    @media screen and (max-width: 768px) {
-        .disclaimer {
-            left: 80px;
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .purchases-grid {
+                grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            }
         }
-    }
+
+        @media (max-width: 768px) {
+            .main-content {
+                margin-left: 80px;
+                padding: 20px;
+            }
+
+            .header {
+                flex-direction: column;
+                text-align: center;
+                gap: 20px;
+            }
+
+            .purchases-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .status-section {
+                grid-template-columns: 1fr;
+            }
+
+            .product-section {
+                flex-direction: column;
+                align-items: center;
+                text-align: center;
+            }
+        }
     </style>
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    const navItems = document.querySelectorAll('.sidebar .nav-item');
 
-    function updateActiveNavItem() {
-        const currentPath = window.location.pathname;
-        const currentHash = window.location.hash;
-        let foundActive = false;
-
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const navItems = document.querySelectorAll('.sidebar .nav-item');
         navItems.forEach(item => {
-            item.classList.remove('active');
-            const href = item.getAttribute('href');
-
-            // Match full path + hash (e.g., /dashboard#grades-section)
-            if (href && href.includes(currentPath) && href.includes(currentHash) && currentHash) {
+            if (item.getAttribute('href') === window.location.pathname) {
                 item.classList.add('active');
-                foundActive = true;
             }
-            // Match hash only (e.g., #dashboard)
-            else if (href && href.startsWith('#') && href === currentHash) {
-                item.classList.add('active');
-                foundActive = true;
-            }
-            // Match full path only (e.g., /payment, /settings)
-            else if (href && href.startsWith('/') && currentPath === href && !currentHash) {
-                item.classList.add('active');
-                foundActive = true;
-            }
-            // Dashboard default
-            else if (href && href.includes('#dashboard') && currentPath.endsWith('/dashboard') && (!currentHash || currentHash === '#dashboard')) {
-                item.classList.add('active');
-                foundActive = true;
-            }
-        });
-
-        // If not found, try localStorage (for cross-page navigation)
-        if (!foundActive) {
-            const savedHref = localStorage.getItem('activeNavItem');
-            if (savedHref) {
-                navItems.forEach(item => {
-                    if (item.getAttribute('href') === savedHref) {
-                        item.classList.add('active');
-                    }
-                });
-            }
-        }
-    }
-
-    // Initial highlight
-    updateActiveNavItem();
-
-    // Highlight on hash change
-    window.addEventListener('hashchange', updateActiveNavItem);
-
-    // Highlight and persist on nav click
-    navItems.forEach(item => {
-        item.addEventListener('click', function() {
-            navItems.forEach(i => i.classList.remove('active'));
-            this.classList.add('active');
-            // Save to localStorage for cross-page persistence
-            localStorage.setItem('activeNavItem', this.getAttribute('href'));
         });
     });
-});
-</script>
+    </script>
 </body>
 </html>

@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Orders - UCU+ Merchandise Hub</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='images/UCULOGO.png') }}">
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='images/UCULOGO.png') }}">
+    <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Mobile Navbar -->
+            <nav class="navbar navbar-expand-lg d-lg-none navbar-dark bg-primary">
+                <div class="container-fluid">
+                    <a class="navbar-brand" href="#">UCU+ Admin</a>
+                    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMobile" aria-controls="navbarMobile" aria-expanded="false" aria-label="Toggle navigation">
+                        <span class="navbar-toggler-icon"></span>
+                    </button>
+                    <div class="collapse navbar-collapse" id="navbarMobile">
+                        <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                            <li class="nav-item">
+                                <a class="nav-link" href="/admin/dashboard">
+                                    <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="/admin/products">
+                                    <i class="fas fa-box me-2"></i>Products
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link active" href="/admin/orders">
+                                    <i class="fas fa-shopping-cart me-2"></i>Orders
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="/admin/users">
+                                    <i class="fas fa-users me-2"></i>Users
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="/admin/payments">
+                                    <i class="fas fa-credit-card me-2"></i>Payments
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="/logout">
+                                    <i class="fas fa-sign-out-alt me-2"></i>Logout
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </nav>
+
+            <!-- Sidebar for larger screens -->
+            <div class="col-lg-2 sidebar d-none d-lg-block p-3">
+                <h3 class="mb-4">Admin Panel</h3>
+                <ul class="nav flex-column">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/admin/dashboard">
+                            <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/admin/products">
+                            <i class="fas fa-box me-2"></i>Products
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/admin/orders">
+                            <i class="fas fa-shopping-cart me-2"></i>Orders
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/admin/users">
+                            <i class="fas fa-users me-2"></i>Users
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/admin/payments">
+                            <i class="fas fa-credit-card me-2"></i>Payments
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/logout">
+                            <i class="fas fa-sign-out-alt me-2"></i>Logout
+                        </a>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Main Content -->
+            <div class="col-12 col-lg-10 main-content">
+                <h2 class="mb-4 text-gray-800">Order Management</h2>
+
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+
+                <!-- Statistics Cards -->
+                <div class="row">
+                    <div class="col-sm-6 col-md-3">
+                        <div class="stat-card bg-primary text-white">
+                            <h5>Total Orders</h5>
+                            <h3>{{ orders|length }}</h3>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-md-3">
+                        <div class="stat-card bg-info text-white">
+                            <h5>Pending Orders</h5>
+                            <h3>{{ orders|selectattr('status', 'equalto', 'pending')|list|length }}</h3>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-md-3">
+                        <div class="stat-card bg-success text-white">
+                            <h5>Completed Orders</h5>
+                            <h3>{{ orders|selectattr('status', 'equalto', 'completed')|list|length }}</h3>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-md-3">
+                        <div class="stat-card bg-warning text-white">
+                            <h5>Pending Payments</h5>
+                            <h3>{{ orders|selectattr('payment_status', 'equalto', 'Pending')|list|length }}</h3>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-md-3">
+                        <div class="stat-card bg-success text-white">
+                            <h5>Successful Payments</h5>
+                            <h3>{{ successful_payments_count }}</h3>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Orders Section -->
+                <section id="orders-section" class="mt-5">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0 text-gray-800">All Orders</h5>
+                            <input type="text" class="form-control form-control-sm" placeholder="Search orders..." id="orderSearch" style="width: 200px;">
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-striped align-middle">
+                                    <thead>
+                                        <tr>
+                                            <th>Order ID</th>
+                                            <th>Customer</th>
+                                            <th>Items</th>
+                                            <th>Total</th>
+                                            <th>Order Status</th>
+                                            <th>Payment Status</th>
+                                            <th>Payment Info</th>
+                                            <th>Payment Method</th>
+                                            <th>Date</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for order in orders %}
+                                        <tr>
+                                            <td><strong>#{{ order.id }}</strong></td>
+                                            <td>
+                                                {% if order.instructor_id %}
+                                                <div>{{ order.instructor_name }}</div>
+                                                <span class="badge bg-warning text-dark" style="font-size: 0.6rem;">Instructor</span>
+                                                {% else %}
+                                                <div>{{ order.first_name }} {{ order.last_name }}</div>
+                                                <span class="badge bg-success" style="font-size: 0.6rem;">Student</span>
+                                                {% endif %}
+                                                <small class="text-muted d-block">{{ order.student_email or order.instructor_email or order.student_id }}</small>
+                                            </td>
+                                            <td>
+                                                {% for item in order.order_items %}
+                                                    <div class="small">{{ item.product_name }} x{{ item.quantity }}</div>
+                                                {% else %}
+                                                    <span class="text-muted">No items</span>
+                                                {% endfor %}
+                                            </td>
+                                            <td><strong>₱{{ "%.2f"|format(order.total_amount) }}</strong></td>
+                                            <td>
+                                                <span class="badge {% if order.status == 'completed' %}bg-success{% elif order.status == 'pending' %}bg-info{% elif order.status == 'cancelled' %}bg-danger{% else %}bg-secondary{% endif %}">
+                                                    {{ order.status|title }}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <span class="badge {% if order.payment_status == 'Success' %}bg-success{% elif order.payment_status == 'Pending' %}bg-warning text-dark{% elif order.payment_status == 'Failed' %}bg-danger{% elif order.payment_status == 'Refunded' %}bg-info{% else %}bg-secondary{% endif %}">
+                                                    {{ order.payment_status or 'Pending' }}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                {% if order.payment_status == 'Success' and order.payment_id %}
+                                                <div class="small text-success">
+                                                    <div><i class="fas fa-check-circle"></i> Paid</div>
+                                                    <div class="text-muted">Ref: {{ order.payment_ref }}</div>
+                                                    {% if order.payment_date %}
+                                                    <div class="text-muted">{{ order.payment_date.strftime('%Y-%m-%d %H:%M') }}</div>
+                                                    {% endif %}
+                                                </div>
+                                                {% else %}
+                                                <span class="text-muted small">—</span>
+                                                {% endif %}
+                                            </td>
+                                            <td><small>{{ order.payment_method or 'N/A' }}</small></td>
+                                            <td><small>{{ order.created_at.strftime('%Y-%m-%d %H:%M') if order.created_at else 'N/A' }}</small></td>
+                                            <td>
+                                                <div class="d-flex flex-column gap-2">
+                                                    {% if order.payment_status == 'Success' %}
+                                                    <span class="badge bg-success" style="font-size: 0.65rem;"><i class="fas fa-credit-card"></i> Payment Order</span>
+                                                    {% elif order.status == 'completed' %}
+                                                    <span class="badge bg-info" style="font-size: 0.65rem;"><i class="fas fa-check"></i> Completed Order</span>
+                                                    {% else %}
+                                                    <span class="badge bg-secondary" style="font-size: 0.65rem;"><i class="fas fa-clock"></i> Processing</span>
+                                                    {% endif %}
+                                                    <div class="d-flex gap-1">
+                                                        <select class="form-select form-select-sm order-status-select" data-id="{{ order.id }}">
+                                                            <option value="pending" {% if order.status == 'pending' %}selected{% endif %}>Pending</option>
+                                                            <option value="completed" {% if order.status == 'completed' %}selected{% endif %}>Completed</option>
+                                                            <option value="cancelled" {% if order.status == 'cancelled' %}selected{% endif %}>Cancelled</option>
+                                                        </select>
+                                                        <button class="btn btn-sm btn-outline-primary save-order-status" data-id="{{ order.id }}">
+                                                            <i class="fas fa-save"></i>
+                                                        </button>
+                                                    </div>
+                                                    <input type="text" class="form-control form-control-sm order-ref-input" data-id="{{ order.id }}" placeholder="Reference #" value="{% if order.payment_status == 'Success' and order.payment_ref %}{{ order.payment_ref }}{% endif %}">
+                                                    <div class="d-flex gap-1">
+                                                        <select class="form-select form-select-sm payment-status-select" data-id="{{ order.id }}">
+                                                            <option value="Pending" {% if (order.payment_status or 'Pending') == 'Pending' %}selected{% endif %}>Pending</option>
+                                                            <option value="Success" {% if order.payment_status == 'Success' %}selected{% endif %}>Success</option>
+                                                            <option value="Failed" {% if order.payment_status == 'Failed' %}selected{% endif %}>Failed</option>
+                                                            <option value="Refund Requested" {% if order.payment_status == 'Refund Requested' %}selected{% endif %}>Refund Requested</option>
+                                                            <option value="Refunded" {% if order.payment_status == 'Refunded' %}selected{% endif %}>Refunded</option>
+                                                        </select>
+                                                        <button class="btn btn-sm btn-outline-success save-payment-status" data-id="{{ order.id }}">
+                                                            <i class="fas fa-save"></i>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        {% else %}
+                                        <tr>
+                                            <td colspan="10" class="text-center text-muted py-4">No orders found.</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Payments Section -->
+                <section id="payments-section" class="mt-5">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0 text-gray-800">Payments</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-striped align-middle">
+                                    <thead>
+                                        <tr>
+                                            <th>Payment ID</th>
+                                            <th>Email</th>
+                                            <th>Amount</th>
+                                            <th>Method</th>
+                                            <th>Reference</th>
+                                            <th>Status</th>
+                                            <th>Date</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for payment in payments %}
+                                        <tr>
+                                            <td><strong>#{{ payment.id }}</strong></td>
+                                            <td><small>{{ payment.email }}</small></td>
+                                            <td><strong>₱{{ "%.2f"|format(payment.amount) }}</strong></td>
+                                            <td><small>{{ payment.payment_method or 'N/A' }}</small></td>
+                                            <td><small>{{ payment.reference_number or 'N/A' }}</small></td>
+                                            <td>
+                                                <span class="badge {% if payment.status == 'Success' %}bg-success{% elif payment.status == 'Pending' %}bg-warning text-dark{% elif payment.status == 'Failed' %}bg-danger{% else %}bg-secondary{% endif %}">
+                                                    {{ payment.status or 'Pending' }}
+                                                </span>
+                                            </td>
+                                            <td><small>{{ payment.payment_date.strftime('%Y-%m-%d %H:%M') if payment.payment_date else 'N/A' }}</small></td>
+                                        </tr>
+                                        {% else %}
+                                        <tr>
+                                            <td colspan="7" class="text-center text-muted py-4">No payments found.</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        :root {
+            --primary-color: #4e73df;
+            --secondary-color: #858796;
+            --success-color: #1cc88a;
+            --info-color: #36b9cc;
+            --warning-color: #f6c23e;
+            --danger-color: #e74a3b;
+            --light-color: #f8f9fc;
+            --dark-color: #5a5c69;
+        }
+
+        body {
+            background-color: #f8f9fc;
+            font-family: 'Nunito', sans-serif;
+        }
+
+        .sidebar {
+            background: linear-gradient(180deg, var(--primary-color) 0%, #224abe 100%);
+            min-height: 100vh;
+            color: white;
+        }
+
+        .sidebar h3 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: white;
+        }
+
+        .sidebar .nav-link {
+            color: rgba(255,255,255,.8);
+            padding: 1rem;
+            font-weight: 500;
+            transition: all 0.3s;
+            border-radius: 0.35rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .sidebar .nav-link:hover {
+            color: white;
+            background-color: rgba(255,255,255,.1);
+        }
+
+        .sidebar .nav-link.active {
+            color: white;
+            background-color: rgba(255,255,255,.2);
+            font-weight: 700;
+        }
+
+        .sidebar .nav-link i {
+            margin-right: 0.5rem;
+            width: 20px;
+        }
+
+        .main-content {
+            padding: 1.5rem;
+        }
+
+        .stat-card {
+            border-radius: 0.35rem;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
+            border: none;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 0.25rem;
+        }
+
+        .stat-card.bg-primary::before {
+            background-color: #2e59d9;
+        }
+
+        .stat-card.bg-success::before {
+            background-color: #17a673;
+        }
+
+        .stat-card.bg-info::before {
+            background-color: #2c9faf;
+        }
+
+        .stat-card.bg-warning::before {
+            background-color: #dba800;
+        }
+
+        .stat-card h5 {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1rem;
+            margin-bottom: 0.5rem;
+            opacity: 0.8;
+        }
+
+        .stat-card h3 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 0;
+        }
+
+        .card {
+            border: none;
+            box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
+            margin-bottom: 1.5rem;
+            border-radius: 0.35rem;
+        }
+
+        .card-header {
+            background-color: #f8f9fc;
+            border-bottom: 1px solid #e3e6f0;
+            padding: 1rem 1.25rem;
+        }
+
+        .card-body {
+            padding: 1rem 1.25rem;
+        }
+
+        .table {
+            margin-bottom: 0;
+        }
+
+        .table th {
+            border-top: none;
+            font-weight: 700;
+            color: var(--dark-color);
+            text-transform: uppercase;
+            font-size: 0.7rem;
+            letter-spacing: 0.05rem;
+        }
+
+        .table td {
+            vertical-align: middle;
+        }
+
+        .badge {
+            padding: 0.5em 0.75em;
+            font-weight: 600;
+        }
+
+        .btn-sm {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.75rem;
+        }
+
+        .btn-outline-primary {
+            color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+
+        .btn-outline-primary:hover {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+
+        .btn-outline-success {
+            color: var(--success-color);
+            border-color: var(--success-color);
+        }
+
+        .btn-outline-success:hover {
+            background-color: var(--success-color);
+            border-color: var(--success-color);
+        }
+
+        .form-select-sm {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.75rem;
+        }
+
+        .text-gray-800 {
+            color: #2e5266;
+        }
+
+        @media (max-width: 767.98px) {
+            .main-content {
+                padding: 1rem;
+            }
+
+            .table-responsive {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            #orderSearch {
+                margin-top: 0.5rem;
+                width: 100% !important;
+            }
+
+            .card-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .d-flex.flex-column.gap-2 {
+                width: 100%;
+            }
+
+            .form-select-sm {
+                max-width: 120px;
+            }
+        }
+    </style>
+
+    <script>
+        (function() {
+            function cleanup() {
+                document.querySelectorAll('.modal-backdrop').forEach(function(el) { el.remove(); });
+                document.body.classList.remove('modal-open');
+                document.body.style.overflow = '';
+                document.body.style.paddingRight = '';
+            }
+            cleanup();
+            document.addEventListener('DOMContentLoaded', cleanup);
+            if (window.MutationObserver) {
+                var obs = new MutationObserver(function(mutations) {
+                    mutations.forEach(function(m) {
+                        m.addedNodes.forEach(function(n) {
+                            if (n.classList && n.classList.contains('modal-backdrop') && !document.querySelector('.modal.show')) {
+                                n.remove();
+                                document.body.classList.remove('modal-open');
+                                document.body.style.overflow = '';
+                            }
+                        });
+                    });
+                });
+                document.addEventListener('DOMContentLoaded', function() { obs.observe(document.body, { childList: true }); });
+            }
+        })();
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function showNotification(message, type = 'success') {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type === 'error' ? 'danger' : type} alert-dismissible fade show position-fixed`;
+            alertDiv.setAttribute('role', 'alert');
+            alertDiv.style.top = '16px';
+            alertDiv.style.right = '16px';
+            alertDiv.style.zIndex = '9999';
+            alertDiv.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            document.body.appendChild(alertDiv);
+            
+            setTimeout(() => {
+                alertDiv.remove();
+            }, 5000);
+        }
+
+        document.querySelectorAll('.save-order-status').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                const id = btn.dataset.id;
+                const select = document.querySelector(`.order-status-select[data-id="${id}"]`);
+                const refInput = document.querySelector(`.order-ref-input[data-id="${id}"]`);
+                fetch(`/api/orders/${id}/status`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status: select.value, reference_number: refInput ? refInput.value : '' })
+                })
+                .then((res) => res.json())
+                .then((data) => {
+                    if (data.success) {
+                        showNotification('Order status updated successfully');
+                        setTimeout(() => window.location.reload(), 1000);
+                    } else {
+                        showNotification(data.error || 'Failed to update order status', 'error');
+                    }
+                })
+                .catch(() => showNotification('Failed to update order status', 'error'));
+            });
+        });
+
+        document.querySelectorAll('.save-payment-status').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                const id = btn.dataset.id;
+                const select = document.querySelector(`.payment-status-select[data-id="${id}"]`);
+                fetch(`/api/orders/${id}/payment-status`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ payment_status: select.value })
+                })
+                .then((res) => res.json())
+                .then((data) => {
+                    if (data.success) {
+                        showNotification('Payment status updated successfully');
+                        setTimeout(() => window.location.reload(), 1000);
+                    } else {
+                        showNotification(data.error || 'Failed to update payment status', 'error');
+                    }
+                })
+                .catch(() => showNotification('Failed to update payment status', 'error'));
+            });
+        });
+
+        // Order search functionality
+        const orderSearchEl = document.getElementById('orderSearch');
+        if (orderSearchEl) {
+            orderSearchEl.addEventListener('input', function(e) {
+                const searchTerm = e.target.value.toLowerCase();
+                const rows = document.querySelectorAll('#orders-section tbody tr');
+                
+                rows.forEach(row => {
+                    const text = row.textContent.toLowerCase();
+                    row.style.display = text.includes(searchTerm) ? '' : 'none';
+                });
+            });
+        }
+    </script>
+</body>
+</html>

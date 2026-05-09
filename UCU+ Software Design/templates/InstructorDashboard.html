@@ -363,11 +363,12 @@
                     <p>Show your department pride with our official department shirts! Each shirt features the department name and logo.</p>
                 </div>
                 <div class="departments">
+                    {% for item in merchandise %}
                     <div class="dept-card">
-                        <img src="{{ url_for('static', filename='images/CEA CPE.png') }}" alt="Engineering Shirt">
-                        <div class="dept-name">Computer Engineering Shirt</div>
-                        <p>Computer Engineering department shirt with gear logo</p>
-                        <p class="price">₱700</p>
+                        <img src="{{ item.image_url or url_for('static', filename='images/UCULOGO.png') }}" alt="{{ item.name }}">
+                        <div class="dept-name">{{ item.name }}</div>
+                        <p class="item-description">{{ item.description or 'No description available.' }}</p>
+                        <p class="price">₱{{ "%.0f"|format(item.price) if item.price == item.price|int else "%.2f"|format(item.price) }}</p>
                         <select>
                             <option>Select Size</option>
                             <option>Small</option>
@@ -376,281 +377,11 @@
                             <option>X-Large</option>
                             <option>2X-Large</option>
                         </select>
-                        <button class="add-to-cart" data-item='{"name": "Computer Engineering Shirt", "price": 700, "image": "CPE.jpg"}'>Add to Cart</button>
+                        <button class="add-to-cart" data-item='{"name": {{ item.name|tojson }}, "price": {{ item.price }}, "image": {{ (item.image_url or '')|replace('/static/images/', '')|tojson }}}'>Add to Cart</button>
                     </div>
-                    <div class="dept-card">
-                        <img src="{{ url_for('static', filename='images/LACE CPE.png') }}" alt="Engineering Shirt">
-                        <div class="dept-name">Computer Engineering ID Lace</div>
-                        <p>Computer Engineering department Lace with gear logo</p>
-                        <p class="price">₱100</p>
-                        <select>
-                            <option>Quantity</option>
-                            <option>1</option>
-                            <option>2</option>
-                            <option>3</option>
-                            <option>4</option>
-                            <option>5</option>
-                        </select>
-                        <button class="add-to-cart" data-item='{"name": "Computer Engineering ID Lace", "price": 100, "image": "LACE CPE.jpg"}'>Add to Cart</button>
-                    </div>
-                    <div class="dept-card">
-                        <img src="{{ url_for('static', filename='images/CEA CPE Bundle.png') }}" alt="Engineering Shirt">
-                        <div class="dept-name">Computer Engineering Shirt and Lace</div>
-                        <p>Computer Engineering department shirt with gear logo</p>
-                        <p class="price">₱700</p>
-                        <select>
-                            <option>Select Size</option>
-                            <option>Small</option>
-                            <option>Medium</option>
-                            <option>Large</option>
-                            <option>X-Large</option>
-                            <option>2X-Large</option>
-                        </select>
-                        <button class="add-to-cart" data-item='{"name": "Computer Engineering Shirt", "price": 700, "image": "CPE.jpg"}'>Add to Cart</button>
-                    </div>
-                    
-                    <div class="dept-card">
-                        <img src="{{ url_for('static', filename='images/CEA CE.png') }}" alt="Civil Engineering Shirt">
-                        <div class="dept-name">Civil Engineering Shirt</div>
-                        <p>Show your Civil Engineering pride with our premium department shirt </p>
-                        <p class="price">₱700</p>
-                        <select>
-                            <option>Select Size</option>
-                            <option>Small</option>
-                            <option>Medium</option>
-                            <option>Large</option>
-                            <option>X-Large</option>
-                            <option>2X-Large</option>
-                        </select>
-                        <button class="add-to-cart" data-item='{"name": "Civil Engineering Shirt", "price": 700, "image": "CE.jpg"}'>Add to Cart</button>
-                    </div>
-                    <div class="dept-card">
-                        <img src="{{ url_for('static', filename='images/LACE CE.png') }}" alt="Civil Engineering ID Lace">
-                        <div class="dept-name">Civil Engineering ID Lace</div>
-                        <p>Represent the Civil Engineering department in style with this high-quality ID lace</p>
-                        <p class="price">₱100</p>
-                        <select>
-                            <option>Quantity</option>
-                            <option>1</option>
-                            <option>2</option>
-                            <option>3</option>
-                            <option>4</option>
-                            <option>5</option>
-                        </select>
-                        <button class="add-to-cart" data-item='{"name": "Civil Engineering ID Lace", "price": 100, "image": "LACE CE.jpg"}'>Add to Cart</button>
-                    </div>
-                    <div class="dept-card">
-                        <img src="{{ url_for('static', filename='images/CEA CE Bundle.png') }}" alt="Engineering Shirt">
-                        <div class="dept-name">Computer Engineering Shirt</div>
-                        <p>Computer Engineering department shirt with gear logo</p>
-                        <p class="price">₱700</p>
-                        <select>
-                            <option>Select Size</option>
-                            <option>Small</option>
-                            <option>Medium</option>
-                            <option>Large</option>
-                            <option>X-Large</option>
-                            <option>2X-Large</option>
-                        </select>
-                        <button class="add-to-cart" data-item='{"name": "Computer Engineering Shirt", "price": 700, "image": "CPE.jpg"}'>Add to Cart</button>
-                    </div>
-                    
-                    <div class="dept-card">
-                        <img src="{{ url_for('static', filename='images/CEA EE.png') }}" alt="Electrical Engineering Shirt">
-                        <div class="dept-name">Electrical Engineering Shirt</div>
-                        <p>Electrical Engineering shirt with professional design</p>
-                        <p class="price">₱700</p>
-                        <select>
-                            <option>Select Size</option>
-                            <option>Small</option>
-                            <option>Medium</option>
-                            <option>Large</option>
-                            <option>X-Large</option>
-                            <option>2X-Large</option>
-                        </select>
-                        <button class="add-to-cart" data-item='{"name": "Electrical Engineering Shirt", "price": 700, "image": "EE.jpg"}'>Add to Cart</button>
-                    </div>
-                    <div class="dept-card">
-                        <img src="{{ url_for('static', filename='images/LACE EE.png') }}" alt="Electrical Engineering ID Lace">
-                        <div class="dept-name">Electrical Engineering ID Lace</div>
-                        <p>Computer Engineering department shirt with gear logo</p>
-                        <p class="price">₱700</p>
-                        <select>
-                            <option>Quantity</option>
-                            <option>1</option>
-                            <option>2</option>
-                            <option>3</option>
-                            <option>4</option>
-                            <option>5</option>
-                        </select>
-                        <button class="add-to-cart" data-item='{"name": "Civil Engineering ID Lace", "price": 100, "image": "CPE.jpg"}'>Add to Cart</button>
-                    </div>
-                    <div class="dept-card">
-                        <img src="{{ url_for('static', filename='images/CEA JEAS.png') }}" alt="College of Engineering Shirt">
-                        <div class="dept-name">CEA JEAS Shirt</div>
-                        <p>College of Engineering shirt with Structural design College of Engineering shirt </p>
-                        <p class="price">₱400</p>
-                        <select>
-                            <option>Select Size</option>
-                            <option>Small</option>
-                            <option>Medium</option>
-                            <option>Large</option>
-                            <option>X-Large</option>
-                            <option>2X-Large</option>
-                        </select>
-                        <button class="add-to-cart" data-item='{"name": "JEAS Shirt ", "price": 400, "image": "CEA.jpg"}'>Add to Cart</button>
-                    </div>
-                    <div class="dept-card">
-                        <img src="{{ url_for('static', filename='images/LACE JEAS.png') }}" alt="JEAS ID Lace">
-                        <div class="dept-name">JEAS ID Lace</div>
-                        <p>College of Engineering shirt with Structural design College of Engineering shirt </p>
-                        <p class="price">₱100</p>
-                        <select>
-                            <option>Quantity</option>
-                            <option>1</option>
-                            <option>2</option>
-                            <option>3</option>
-                            <option>4</option>
-                            <option>5</option>
-                        </select>
-                        <button class="add-to-cart" data-item='{"name": "JEAS ID Lace", "price": 100, "image": "LACE JEAS.jpg"}'>Add to Cart</button>
-                    </div>
-                    <div class="dept-card">
-                        <img src="{{ url_for('static', filename='images/CEA BAG.png') }}" alt="Architecture ID Lace">
-                        <div class="dept-name">Architecture ID Lace</div>
-                        <p>Architecture ID Lace with creative design</p>
-                        <p class="price">₱100</p>
-                        <select>
-                            <option>Quantity</option>
-                            <option>1</option>
-                            <option>2</option>
-                            <option>3</option>
-                            <option>4</option>
-                            <option>5</option>
-                        </select>
-                        <button class="add-to-cart" data-item='{"name": "Architecture ID Lace", "price": 100, "image": "LACE ARCHI.jpg"}'>Add to Cart</button>
-                    </div>
-                    <div class="dept-card">
-                        <img src="{{ url_for('static', filename='images/CEA JEAS Bottle.png') }}" alt="Engineering Shirt">
-                        <div class="dept-name">CEA JEAS WATER Bottle</div>
-                        <p>College of Engineering shirt with Structural design College of Engineering shirt </p>
-                        <p class="price">₱700</p>
-                        <select>
-                            <option>Select Size</option>
-                            <option>Small</option>
-                            <option>Medium</option>
-                            <option>Large</option>
-                            <option>X-Large</option>
-                            <option>2X-Large</option>
-                        </select>
-                        <button class="add-to-cart" data-item='{"name": "Computer Engineering Shirt", "price": 700, "image": "CPE.jpg"}'>Add to Cart</button>
-                    </div>
-                    <div class="dept-card">
-                        <img src="{{ url_for('static', filename='images/CEA JEAS Bundle.png') }}" alt="Engineering Shirt">
-                        <div class="dept-name">Computer Engineering Shirt</div>
-                        <p>Computer Engineering department shirt with gear logo</p>
-                        <p class="price">₱700</p>
-                        <select>
-                            <option>Select Size</option>
-                            <option>Small</option>
-                            <option>Medium</option>
-                            <option>Large</option>
-                            <option>X-Large</option>
-                            <option>2X-Large</option>
-                        </select>
-                        <button class="add-to-cart" data-item='{"name": "Computer Engineering Shirt", "price": 700, "image": "CPE.jpg"}'>Add to Cart</button>
-                    </div>
-
-                    <div class="dept-card">
-                        <img src="{{ url_for('static', filename='images/CEA Maroon.jpg') }}" alt="CEA Maroon Sport Shirt">
-                        <div class="dept-name">CEA Maroon Sport Shirt</div>
-                        <p>CEA Maroon Sport Shirt with creative design</p>
-                        <p class="price">₱410</p>
-                        <select>
-                            <option>Select Size</option>
-                            <option>Small</option>
-                            <option>Medium</option>
-                            <option>Large</option>
-                            <option>X-Large</option>
-                            <option>2X-Large</option>
-                        </select>
-                        <button class="add-to-cart" data-item='{"name": "CEA Maroon Sport Shirt", "price": 410, "image": "CEA Maroon.jpg"}'>Add to Cart</button>
-                    </div>
-                    <div class="dept-card">
-                        <img src="{{ url_for('static', filename='images/CEA White.jpg') }}" alt="CEA White Sport Shirt">
-                        <div class="dept-name">CEA White Sport Shirt</div>
-                        <p>CEA White Sport Shirt with creative design</p>
-                        <p class="price">₱410</p>
-                        <select>
-                            <option>Select Size</option>
-                            <option>Small</option>
-                            <option>Medium</option>
-                            <option>Large</option>
-                            <option>X-Large</option>
-                            <option>2X-Large</option>
-                        </select>
-                        <button class="add-to-cart" data-item='{"name": "CEA White Sport Shirt", "price": 410, "image": "CEA White.jpg"}'>Add to Cart</button>
-                    </div>
-                    <div class="dept-card">
-                        <img src="{{ url_for('static', filename='images/CEA ARCHI.png') }}" alt="Architecture Shirt">
-                        <div class="dept-name">Architecture Shirt</div>
-                        <p>Architecture Shirt with creative design</p>
-                        <p class="price">₱700</p>
-                        <select>
-                            <option>Select Size</option>
-                            <option>Small</option>
-                            <option>Medium</option>
-                            <option>Large</option>
-                            <option>X-Large</option>
-                            <option>2X-Large</option>
-                        </select>
-                        <button class="add-to-cart" data-item='{"name": "Architecture Shirt", "price": 700, "image": "CEA ARCHI.jpg"}'>Add to Cart</button>
-                    </div>
-                    <div class="dept-card">
-                        <img src="{{ url_for('static', filename='images/LACE ARCHI.png') }}" alt="Architecture ID Lace">
-                        <div class="dept-name">Architecture ID Lace</div>
-                        <p>Architecture ID Lace with creative design</p>
-                        <p class="price">₱100</p>
-                        <select>
-                            <option>Quantity</option>
-                            <option>1</option>
-                            <option>2</option>
-                            <option>3</option>
-                            <option>4</option>
-                            <option>5</option>
-                        </select>
-                        <button class="add-to-cart" data-item='{"name": "Architecture ID Lace", "price": 100, "image": "LACE ARCHI.jpg"}'>Add to Cart</button>
-                    </div>
-                    <div class="dept-card">
-                        <img src="{{ url_for('static', filename='images/CEA ECE.png') }}" alt="Architecture ID Lace">
-                        <div class="dept-name">Architecture ID Lace</div>
-                        <p>Architecture ID Lace with creative design</p>
-                        <p class="price">₱100</p>
-                        <select>
-                            <option>Select Size</option>
-                            <option>Small</option>
-                            <option>Medium</option>
-                            <option>Large</option>
-                            <option>X-Large</option>
-                            <option>2X-Large</option>
-                        </select>
-                        <button class="add-to-cart" data-item='{"name": "Architecture ID Lace", "price": 100, "image": "LACE ARCHI.jpg"}'>Add to Cart</button>
-                    </div>
-                    <div class="dept-card">
-                        <img src="{{ url_for('static', filename='images/LACE ECE.png') }}" alt="Architecture ID Lace">
-                        <div class="dept-name">Architecture ID Lace</div>
-                        <p>Architecture ID Lace with creative design</p>
-                        <p class="price">₱100</p>
-                        <select>
-                            <option>Quantity</option>
-                            <option>1</option>
-                            <option>2</option>
-                            <option>3</option>
-                            <option>4</option>
-                            <option>5</option>
-                        </select>
-                        <button class="add-to-cart" data-item='{"name": "Architecture ID Lace", "price": 100, "image": "LACE ARCHI.jpg"}'>Add to Cart</button>
-                    </div>
+                    {% else %}
+                    <p class="text-muted">No merchandise available.</p>
+                    {% endfor %}
                 </div>
             </section>
             <footer>
@@ -908,7 +639,14 @@
             flex-grow: 1;
             min-height: 3em;
         }
-        
+
+        .item-description {
+            color: var(--light-text);
+            font-size: 0.9rem;
+            line-height: 1.4;
+            min-height: 2.5em;
+        }
+
         .price {
             color: #cc0000;
             font-weight: bold;
@@ -2172,6 +1910,85 @@ document.addEventListener('DOMContentLoaded', function() {
             this.classList.add('active');
             // Save to localStorage for cross-page persistence
             localStorage.setItem('activeNavItem', this.getAttribute('href'));
+        });
+    });
+});
+</script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Add to Cart functionality for Instructor Dashboard
+    const addToCartButtons = document.querySelectorAll('.add-to-cart');
+        
+    // Listen for clicks on each button
+    addToCartButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            // Get the quantity from the select dropdown
+            const quantitySelect = button.previousElementSibling;
+            const quantity = parseInt(quantitySelect?.value) || 1;
+                
+            // Get the size if it's a size select dropdown
+            const size = quantitySelect?.querySelector('option:checked')?.textContent || '';
+                
+            // Parse item details from the data-item attribute
+            const item = JSON.parse(button.getAttribute('data-item'));
+                
+            // Add to cart via API
+            fetch('/add_to_cart', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    item_id: item.name, // Use name as identifier since we don't have item_id
+                    quantity: quantity,
+                    size: size !== 'Select Size' && size !== 'Quantity' ? size : undefined
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Show success message
+                    const message = document.createElement('div');
+                    message.style.cssText = `
+                        position: fixed;
+                        top: 20px;
+                        right: 20px;
+                        background-color: #4CAF50;
+                        color: white;
+                        padding: 15px 25px;
+                        border-radius: 5px;
+                        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+                        z-index: 1000;
+                        animation: slideIn 0.5s ease-out;
+                    `;
+                    message.textContent = `${quantity} x ${item.name}${size !== 'Select Size' && size !== 'Quantity' ? ` (${size})` : ''} added to cart!`;
+                    document.body.appendChild(message);
+
+                    // Add animation keyframes
+                    const style = document.createElement('style');
+                    style.textContent = `
+                        @keyframes slideIn {
+                            from { transform: translateX(100%); opacity: 0; }
+                            to { transform: translateX(0); opacity: 1; }
+                        }
+                    `;
+                    document.head.appendChild(style);
+
+                    // Remove message after 1.5 seconds and redirect to payment
+                    setTimeout(() => {
+                        message.remove();
+                        style.remove();
+                        window.location.href = '/instructor_payment';
+                    }, 1500);
+                } else {
+                    // Show error message
+                    alert('Error adding to cart: ' + (data.error || 'Unknown error'));
+                }
+            })
+            .catch(error => {
+                console.error('Error adding to cart:', error);
+                alert('Error adding to cart. Please try again.');
+            });
         });
     });
 });
