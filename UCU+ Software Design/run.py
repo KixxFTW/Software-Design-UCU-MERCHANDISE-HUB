@@ -2763,13 +2763,39 @@ def my_purchases():
             ORDER BY o.created_at DESC, o.id DESC
         """
         cursor.execute(query, (student_id,))
-        purchases = list(cursor.fetchall())
+        rows = cursor.fetchall()
 
-        # Normalize image URLs to full static paths
-        for row in purchases:
-            img = row.get('image_url') or ''
-            if img and not img.startswith('/'):
-                row['image_url'] = f'/static/images/{img}'
+        # Group rows by order for template rendering
+        purchases = []
+        order_map = {}
+        for row in rows:
+            oid = row['order_id']
+            if oid not in order_map:
+                order_map[oid] = {
+                    'order_id': oid,
+                    'total_amount': float(row['total_amount'] or 0),
+                    'status': row['status'],
+                    'payment_status': row['payment_status'],
+                    'payment_method': row['payment_method'],
+                    'created_at': row['created_at'],
+                    'reference_number': row.get('reference_number') or '',
+                    'image_url': '',
+                    'order_items': []
+                }
+            if row['item_name']:
+                img = row.get('image_url') or ''
+                if img and not img.startswith('/'):
+                    img = f'/static/images/{img}'
+                order_map[oid]['order_items'].append({
+                    'name': row['item_name'],
+                    'quantity': row['quantity'],
+                    'price': float(row['price'] or 0),
+                    'image_url': img
+                })
+                # Use first item's image for the order card
+                if not order_map[oid]['image_url']:
+                    order_map[oid]['image_url'] = img
+        purchases = list(order_map.values())
 
         cursor.close()
         conn.close()
