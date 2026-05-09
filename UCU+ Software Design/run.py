@@ -2795,6 +2795,16 @@ def my_purchases():
                 if not order_map[oid]['image_url']:
                     order_map[oid]['image_url'] = img
         purchases = list(order_map.values())
+        for p in purchases:
+            if p['order_items']:
+                first = p['order_items'][0]
+                p.setdefault('item_name', first['name'])
+                p.setdefault('quantity', first['quantity'])
+                p.setdefault('price', first['price'])
+            else:
+                p.setdefault('item_name', '')
+                p.setdefault('quantity', 0)
+                p.setdefault('price', 0.0)
 
         # Also fetch historical completed payments whose orders were deleted (old bug)
         cursor.execute("SELECT email FROM students WHERE student_id = %s", (student_id,))
@@ -2964,6 +2974,16 @@ def instructor_my_purchases():
                 if not order_map[oid]['image_url']:
                     order_map[oid]['image_url'] = img
         purchases = list(order_map.values())
+        for p in purchases:
+            if p['order_items']:
+                first = p['order_items'][0]
+                p.setdefault('item_name', first['name'])
+                p.setdefault('quantity', first['quantity'])
+                p.setdefault('price', first['price'])
+            else:
+                p.setdefault('item_name', '')
+                p.setdefault('quantity', 0)
+                p.setdefault('price', 0.0)
 
         # Also fetch historical completed payments whose orders were deleted (old bug)
         instructor_email = session.get('email')
