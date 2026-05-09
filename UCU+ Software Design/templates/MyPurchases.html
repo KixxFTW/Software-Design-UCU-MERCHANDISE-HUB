@@ -57,8 +57,14 @@
                         <!-- Order Header -->
                         <div class="order-header">
                             <div class="order-number">
-                                <span class="badge">Order #{{ purchase.order_id }}</span>
-                                <span class="order-date">{{ purchase.created_at|default('N/A') }}</span>
+                                <span class="badge">
+                                    {% if purchase.order_items %}
+                                        {{ purchase.order_items[0].name }}{% if purchase.order_items|length > 1 %} +{{ purchase.order_items|length - 1 }} more{% endif %}
+                                    {% else %}
+                                        Order #{{ purchase.order_id }}
+                                    {% endif %}
+                                </span>
+                                <span class="order-date">{{ purchase.created_at|default('N/A') }} · Order #{{ purchase.order_id }}</span>
                             </div>
                             <span class="status-badge {% if purchase.status|lower == 'completed' %}status-completed{% elif purchase.status|lower == 'processing' %}status-processing{% else %}status-pending{% endif %}">
                                 {{ purchase.status|default('Pending')|title }}
@@ -75,8 +81,8 @@
                                 </div>
                                 {% else %}
                                 <div class="product-image">
-                                    <img src="{{ url_for('static', filename='images/UCULOGO.png') }}"
-                                         alt="Product">
+                                    <img src="{{ purchase.image_url or url_for('static', filename='images/UCULOGO.png') }}"
+                                         alt="{{ purchase.order_items[0].name if purchase.order_items else 'Product' }}">
                                 </div>
                                 {% endfor %}
                             </div>
@@ -91,7 +97,7 @@
                                 </div>
                                 {% else %}
                                 <div class="item-row">
-                                    <h3>Order #{{ purchase.order_id }}</h3>
+                                    <h3>{{ purchase.order_items[0].name if purchase.order_items else 'Order #' ~ purchase.order_id }}</h3>
                                     <span class="unit-price">Product details retained</span>
                                 </div>
                                 {% endfor %}
