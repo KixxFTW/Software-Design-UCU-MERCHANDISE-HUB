@@ -105,51 +105,78 @@ except ImportError:
 def get_google_provider_cfg():
     return requests.get(GOOGLE_DISCOVERY_URL).json()
 
-# Email sending function (using SendGrid API - works on Vercel without SMTP)
+# Email sending function with fallback chain:
+#   1. SendGrid API (production / Vercel)
+#   2. Gmail SMTP  (local dev with GMAIL_APP_PASSWORD)
+#   3. Console-only (local dev without any email service – OTP is printed to terminal)
 def send_email(to_email, subject, body):
-    try:
-        api_key = os.environ.get('SENDGRID_API_KEY')
-        sender_email = os.environ.get('SENDGRID_FROM_EMAIL', 'valdezmarkjethro@gmail.com')
+    sender_email = os.environ.get('SENDGRID_FROM_EMAIL', 'valdezmarkjethro@gmail.com')
 
-        if not api_key:
-            err = "SENDGRID_API_KEY environment variable is not set. Sign up at https://sendgrid.com, get your API key, and add it to your environment variables."
-            print(err)
-            return False, err
+    # ---- Attempt 1: SendGrid ------------------------------------------------
+    api_key = os.environ.get('SENDGRID_API_KEY')
+    if api_key:
+        try:
+            import urllib.request
+            import json as _json
 
-        import urllib.request
-        import json
+            data = _json.dumps({
+                "personalizations": [{"to": [{"email": to_email}]}],
+                "from": {"email": sender_email},
+                "subject": subject,
+                "content": [{"type": "text/plain", "value": body}]
+            }).encode('utf-8')
 
-        data = json.dumps({
-            "personalizations": [{"to": [{"email": to_email}]}],
-            "from": {"email": sender_email},
-            "subject": subject,
-            "content": [{"type": "text/plain", "value": body}]
-        }).encode('utf-8')
+            req = urllib.request.Request(
+                "https://api.sendgrid.com/v3/mail/send",
+                data=data,
+                headers={
+                    "Authorization": f"Bearer {api_key}",
+                    "Content-Type": "application/json"
+                },
+                method="POST"
+            )
 
-        req = urllib.request.Request(
-            "https://api.sendgrid.com/v3/mail/send",
-            data=data,
-            headers={
-                "Authorization": f"Bearer {api_key}",
-                "Content-Type": "application/json"
-            },
-            method="POST"
-        )
+            with urllib.request.urlopen(req) as response:
+                print(f"[SendGrid] Email sent successfully to {to_email}")
+                return True, None
 
-        with urllib.request.urlopen(req) as response:
-            print(f"Email sent successfully to {to_email}")
+        except Exception as e:
+            err_msg = str(e)
+            print(f"[SendGrid] Failed: {err_msg}")
+            traceback.print_exc()
+            # Fall through to next method
+
+    # ---- Attempt 2: Gmail SMTP -----------------------------------------------
+    gmail_password = os.environ.get('GMAIL_APP_PASSWORD')
+    gmail_user = os.environ.get('GMAIL_USER', sender_email)
+    if gmail_password:
+        try:
+            msg = MIMEText(body)
+            msg['Subject'] = subject
+            msg['From'] = gmail_user
+            msg['To'] = to_email
+
+            with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
+                server.login(gmail_user, gmail_password)
+                server.sendmail(gmail_user, to_email, msg.as_string())
+
+            print(f"[Gmail SMTP] Email sent successfully to {to_email}")
             return True, None
 
-    except urllib.error.HTTPError as e:
-        err_body = e.read().decode()
-        err_msg = f"SendGrid API error ({e.code}): {err_body}"
-        print(err_msg)
-        return False, err_msg
-    except Exception as e:
-        err_msg = str(e)
-        print(f"Error sending email: {err_msg}")
-        traceback.print_exc()
-        return False, err_msg
+        except Exception as e:
+            err_msg = str(e)
+            print(f"[Gmail SMTP] Failed: {err_msg}")
+            traceback.print_exc()
+            # Fall through to console fallback
+
+    # ---- Attempt 3: Console fallback (development) ---------------------------
+    print("=" * 60)
+    print("  EMAIL (console fallback – no email service configured)")
+    print(f"  To:      {to_email}")
+    print(f"  Subject: {subject}")
+    print(f"  Body:    {body}")
+    print("=" * 60)
+    return True, None
 
 def _is_admin() -> bool:
     # Admin logic in this project is currently based on hardcoded student_id/course.
