@@ -2313,13 +2313,14 @@ def admin_orders():
                 COALESCE(s.first_name, '') AS first_name,
                 COALESCE(s.last_name, o.student_id) AS last_name,
                 s.email AS student_email,
-                o.instructor_id AS instructor_name,
-                '' AS instructor_email,
+                COALESCE(e.full_name, '') AS instructor_name,
+                COALESCE(e.email, '') AS instructor_email,
                 p.id AS payment_id,
                 p.reference_number AS payment_ref,
                 p.payment_date AS payment_date
             FROM orders o
             LEFT JOIN students s ON s.student_id = o.student_id
+            LEFT JOIN educators e ON e.id = o.instructor_id
             LEFT JOIN payments p ON p.reference_number = CONCAT('ORD-', o.id)
             WHERE NOT (o.status = 'Completed' AND o.payment_status = 'Success')
             ORDER BY o.created_at DESC, o.id DESC

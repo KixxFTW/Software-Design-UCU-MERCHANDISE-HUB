@@ -173,11 +173,11 @@
                                             <td><strong>#{{ order.id }}</strong></td>
                                             <td>
                                                 {% if order.instructor_id %}
-                                                <div>{{ order.instructor_name }}</div>
-                                                <span class="badge bg-warning text-dark" style="font-size: 0.6rem;">Instructor</span>
+                                                <div>{{ order.instructor_name or 'Instructor #' + order.instructor_id|string }}</div>
+                                                <span class="badge bg-info" style="font-size: 0.6rem;">Instructor</span>
                                                 {% else %}
                                                 <div>{{ order.first_name }} {{ order.last_name }}</div>
-                                                <span class="badge bg-success" style="font-size: 0.6rem;">Student</span>
+                                                <span class="badge bg-primary" style="font-size: 0.6rem;">Student</span>
                                                 {% endif %}
                                                 <small class="text-muted d-block">{{ order.student_email or order.instructor_email or order.student_id }}</small>
                                             </td>
