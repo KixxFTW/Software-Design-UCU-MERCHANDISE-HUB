@@ -2638,16 +2638,8 @@ def forgot_password():
                 cursor.execute("INSERT INTO password_resets (user_id, email, otp) VALUES (%s, %s, %s)", (uid, user['email'], otp))
             conn.commit()
 
-            # Send the OTP via email
-            email_sent, email_err = send_email(user['email'], "Password Reset OTP",
-                    f"Your OTP for resetting your password is: {otp}")
-
-            if email_sent:
-                flash('An OTP has been sent to your email.', 'success')
-                return redirect(f'/reset_password/{uid}?type={user_type}')
-            else:
-                flash(f'Failed to send OTP email: {email_err}', 'danger')
-                return redirect('/')
+            flash(f'OTP stored in password_resets table: {otp}', 'success')
+            return redirect(f'/reset_password/{uid}?type={user_type}')
         else:
             flash('No account found with the provided information.', 'danger')
 
