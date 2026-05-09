@@ -2747,7 +2747,7 @@ def my_purchases():
 
         # Show purchases for this student (orders + order_items + merchandise).
         query = """
-            SELECT 
+            SELECT
                 o.id AS order_id,
                 o.total_amount,
                 o.status,
@@ -2766,13 +2766,41 @@ def my_purchases():
             ORDER BY o.created_at DESC, o.id DESC
         """
         cursor.execute(query, (student_id,))
-        purchases = cursor.fetchall()
+        purchases = list(cursor.fetchall())
 
         # Normalize image URLs to full static paths
         for row in purchases:
             img = row.get('image_url') or ''
             if img and not img.startswith('/'):
                 row['image_url'] = f'/static/images/{img}'
+
+        # Also show completed payments (orders get deleted after completion)
+        cursor.execute("SELECT email FROM students WHERE student_id = %s", (student_id,))
+        student_row = cursor.fetchone()
+        student_email = student_row['email'] if student_row else None
+        if student_email:
+            cursor.execute(
+                """
+                SELECT
+                    id AS order_id,
+                    amount AS total_amount,
+                    'completed' AS status,
+                    'Success' AS payment_status,
+                    payment_method,
+                    payment_date AS created_at,
+                    1 AS quantity,
+                    amount AS price,
+                    'Completed Order' AS item_name,
+                    '' AS image_url,
+                    reference_number
+                FROM payments
+                WHERE email = %s AND status = 'Success'
+                ORDER BY payment_date DESC, id DESC
+                """,
+                (student_email,)
+            )
+            for row in cursor.fetchall():
+                purchases.append(row)
 
         cursor.close()
         conn.close()
@@ -2848,7 +2876,7 @@ def instructor_my_purchases():
         
         # Query orders table for instructor purchases (process_order stores here)
         query = """
-            SELECT 
+            SELECT
                 o.id AS order_id,
                 o.total_amount,
                 o.payment_status,
@@ -2904,6 +2932,51 @@ def instructor_my_purchases():
                 if not order_map[oid]['image_url']:
                     order_map[oid]['image_url'] = img
         purchases = list(order_map.values())
+
+        # Also show completed payments (orders get deleted after completion)
+        instructor_email = session.get('email')
+        if instructor_email:
+            cursor.execute(
+                """
+                SELECT
+                    id AS order_id,
+                    amount AS total_amount,
+                    'completed' AS status,
+                    'Success' AS payment_status,
+                    payment_method,
+                    '' AS delivery_option,
+                    '' AS delivery_address,
+                    payment_date AS created_at,
+                    1 AS quantity,
+                    amount AS price,
+                    'Completed Order' AS item_name,
+                    '' AS image_url,
+                    reference_number
+                FROM payments
+                WHERE email = %s AND status = 'Success'
+                ORDER BY payment_date DESC, id DESC
+                """,
+                (instructor_email,)
+            )
+            for row in cursor.fetchall():
+                purchases.append({
+                    'order_id': row['order_id'],
+                    'total_amount': float(row['total_amount'] or 0),
+                    'status': row['status'],
+                    'payment_status': row['payment_status'],
+                    'payment_method': row['payment_method'],
+                    'delivery_option': row['delivery_option'],
+                    'delivery_address': row['delivery_address'],
+                    'created_at': row['created_at'],
+                    'reference_number': row.get('reference_number') or '',
+                    'image_url': '',
+                    'order_items': [{
+                        'name': row['item_name'],
+                        'quantity': row['quantity'],
+                        'price': float(row['price'] or 0),
+                        'image_url': ''
+                    }]
+                })
 
         cursor.close()
         conn.close()
