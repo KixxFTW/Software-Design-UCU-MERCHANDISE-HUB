@@ -185,6 +185,7 @@ def _handle_instructor_google_oauth(user_info: dict):
         )
         conn.commit()
 
+        session.clear()
         session['instructor_id'] = instructor.get('id')
         session['full_name'] = instructor.get('full_name')
         session['email'] = instructor.get('email')
@@ -784,6 +785,7 @@ def login():
         if user:
             if _check_password(password, user['password']):
                 # Set session data
+                session.clear()
                 session['student_id'] = user['student_id']
                 session['first_name'] = user['first_name']
                 session['last_name'] = user['last_name']
@@ -941,6 +943,7 @@ def google_callback():
                 query = "SELECT * FROM students WHERE email = %s"
                 cursor.execute(query, (email,))
                 user = cursor.fetchone()
+            session.clear()
             session['student_id'] = user['student_id']
             session['first_name'] = user['first_name']
             session['last_name'] = user['last_name']
@@ -1057,8 +1060,9 @@ def google_api_callback():
         print(f"New user created via Google API: {user['email']} (ID: {user['student_id']})")
     else:
         print(f"User logged in via Google API: {user['email']}")
-    
+
     # Store user info in session
+    session.clear()
     session['student_id'] = user['student_id']
     session['first_name'] = user['first_name']
     session['last_name'] = user['last_name']
@@ -2829,8 +2833,8 @@ def request_refund(order_id: int):
 def instructor_my_purchases():
     try:
         # Check if instructor is logged in
-        if 'email' not in session:
-            flash('Please log in to access the dashboard.', 'warning')
+        if 'instructor_id' not in session:
+            flash('Please log in as an instructor to access this page.', 'warning')
             return redirect('/')
 
         instructor_email = session.get('email')
