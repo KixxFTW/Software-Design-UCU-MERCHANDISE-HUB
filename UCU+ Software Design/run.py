@@ -1683,9 +1683,11 @@ def add_to_cart():
         conn = get_db_connection()
         cursor = conn.cursor()
         
-        # Try to get item by ID first, then by name if ID fails
-        cursor.execute("SELECT * FROM merchandise WHERE id = %s", (item_identifier,))
-        item = cursor.fetchone()
+        # Try to get item by ID first (only if identifier looks numeric), then by name
+        item = None
+        if isinstance(item_identifier, int) or (isinstance(item_identifier, str) and item_identifier.isdigit()):
+            cursor.execute("SELECT * FROM merchandise WHERE id = %s", (int(item_identifier),))
+            item = cursor.fetchone()
         
         if not item:
             # If not found by ID, try by name
