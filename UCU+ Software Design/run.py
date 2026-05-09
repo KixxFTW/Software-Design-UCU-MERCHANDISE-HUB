@@ -170,10 +170,17 @@ def _merch_category_column(cursor) -> str:
 
 def _to_public_image_url(raw_image: str | None) -> str:
     if not raw_image:
-        return "/static/images/placeholder.png"
+        return "https://via.placeholder.com/300x300?text=No+Image"
     image = str(raw_image).strip()
     if image.startswith("/static/") or image.startswith("http://") or image.startswith("https://"):
         return image
+    # If it's just a filename, convert to Supabase Storage URL
+    if supabase:
+        try:
+            return supabase.storage.from_('products').get_public_url(image)
+        except:
+            pass
+    # Fallback to static images folder
     return f"/static/images/{image}"
 
 def _handle_instructor_google_oauth(user_info: dict):
@@ -1900,11 +1907,9 @@ def get_cart():
         cursor.close()
         conn.close()
 
-        # Normalize image URLs to full static paths
+        # Normalize image URLs to full public URLs with Supabase support
         for item in cart_items:
-            img = item.get('image_url') or ''
-            if img and not img.startswith('/'):
-                item['image_url'] = f'/static/images/{img}'
+            item['image_url'] = _to_public_image_url(item.get('image_url'))
         
         return jsonify({
             'success': True,
