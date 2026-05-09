@@ -856,19 +856,19 @@
         {% if messages %}
             <script>
                 {% for category, message in messages %}
-                    if ('{{ category }}' === 'success') {
+                    if ({{ category | tojson }} === 'success') {
                         Swal.fire({
                             icon: 'success',
                             title: 'Success!',
-                            text: '{{ message }}',
+                            text: {{ message | tojson }},
                             confirmButtonText: 'OK'
                         });
-                    } else if ('{{ category }}' === 'danger') {
+                    } else if ({{ category | tojson }} === 'danger') {
                         Swal.fire({
                             icon: 'error',
                             title: 'Error!',
-                            text: '{{ message }}',
-                            confirmButtonText: 'Try Again'
+                            confirmButtonText: 'Try Again',
+                            text: {{ message | tojson }}
                         });
                     }
                 {% endfor %}
