@@ -105,31 +105,46 @@ except ImportError:
 def get_google_provider_cfg():
     return requests.get(GOOGLE_DISCOVERY_URL).json()
 
-# Email sending function
+# Email sending function (using Resend HTTP API to bypass serverless SMTP blocking)
 def send_email(to_email, subject, body):
     try:
-        # Gmail SMTP settings from environment variables
-        sender_email = os.environ.get('SMTP_EMAIL', 'valdezmarkjethro@gmail.com')
-        sender_password = os.environ.get('SMTP_PASSWORD', 'nnfprccfjnjmukfs')
+        api_key = os.environ.get('RESEND_API_KEY')
+        sender_email = os.environ.get('RESEND_FROM_EMAIL', 'onboarding@resend.dev')
 
-        if not sender_password:
-            err = "SMTP_PASSWORD environment variable is not set. Go to https://myaccount.google.com/apppasswords to generate an App Password, then set it in your environment variables."
+        if not api_key:
+            err = "RESEND_API_KEY environment variable is not set. Sign up at https://resend.com, get your API key, and add it to your environment variables."
             print(err)
             return False, err
 
-        # Create message
-        msg = MIMEText(body)
-        msg['Subject'] = subject
-        msg['From'] = sender_email
-        msg['To'] = to_email
+        import urllib.request
+        import json
 
-        # Connect to Gmail SMTP server
-        with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
-            server.login(sender_email, sender_password)
-            server.sendmail(sender_email, to_email, msg.as_string())
-            print(f"Email sent successfully to {to_email}")
+        data = json.dumps({
+            "from": sender_email,
+            "to": [to_email],
+            "subject": subject,
+            "text": body
+        }).encode('utf-8')
+
+        req = urllib.request.Request(
+            "https://api.resend.com/emails",
+            data=data,
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json"
+            },
+            method="POST"
+        )
+
+        with urllib.request.urlopen(req) as response:
+            print(f"Email sent successfully to {to_email}: {response.read().decode()}")
             return True, None
 
+    except urllib.error.HTTPError as e:
+        err_body = e.read().decode()
+        err_msg = f"Resend API error ({e.code}): {err_body}"
+        print(err_msg)
+        return False, err_msg
     except Exception as e:
         err_msg = str(e)
         print(f"Error sending email: {err_msg}")
