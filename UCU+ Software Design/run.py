@@ -394,6 +394,27 @@ def api_update_order_status(order_id: int):
                         (email, amount, payment_method, ref),
                     )
 
+            # Copy first order item image/name to payment for display after order deletion
+            cursor.execute(
+                """
+                SELECT COALESCE(m.name, 'Completed Order') AS item_name,
+                       COALESCE(m.image_url, '') AS image_url
+                FROM order_items oi
+                LEFT JOIN merchandise m ON m.id = oi.item_id
+                WHERE oi.order_id = %s
+                ORDER BY oi.id LIMIT 1
+                """,
+                (order_id,),
+            )
+            item_row = cursor.fetchone()
+            if item_row:
+                item_name = item_row['item_name']
+                img_url = item_row['image_url'] or ''
+                cursor.execute(
+                    "UPDATE payments SET item_name=%s, image_url=%s WHERE reference_number=%s",
+                    (item_name, img_url, ref),
+                )
+
         # Remove completed order from orders table
         if new_status == 'completed':
             try:
@@ -465,6 +486,27 @@ def api_update_order_payment_status(order_id: int):
                         """,
                         (email, amount, payment_method, ref),
                     )
+
+            # Copy first order item image/name to payment for display after order deletion
+            cursor.execute(
+                """
+                SELECT COALESCE(m.name, 'Completed Order') AS item_name,
+                       COALESCE(m.image_url, '') AS image_url
+                FROM order_items oi
+                LEFT JOIN merchandise m ON m.id = oi.item_id
+                WHERE oi.order_id = %s
+                ORDER BY oi.id LIMIT 1
+                """,
+                (order_id,),
+            )
+            item_row = cursor.fetchone()
+            if item_row:
+                item_name = item_row['item_name']
+                img_url = item_row['image_url'] or ''
+                cursor.execute(
+                    "UPDATE payments SET item_name=%s, image_url=%s WHERE reference_number=%s",
+                    (item_name, img_url, ref),
+                )
 
         # If marking as Refunded, remove from payments table
         if new_status == 'Refunded':
@@ -2788,6 +2830,10 @@ def my_purchases():
                     'Success' AS payment_status,
                     payment_method,
                     payment_date AS created_at,
+                    1 AS quantity,
+                    amount AS price,
+                    'Completed Order' AS item_name,
+                    '' AS image_url,
                     reference_number
                 FROM payments
                 WHERE email = %s AND status = 'Success'
@@ -2796,54 +2842,48 @@ def my_purchases():
                 (student_email,)
             )
             for row in cursor.fetchall():
-                # Try to get original order items for product images
-                order_id = row['order_id']
-                cursor.execute(
-                    """
-                    SELECT
-                        oi.quantity,
-                        oi.price,
-                        COALESCE(m.name, 'Completed Order') AS item_name,
-                        COALESCE(m.image_url, '') AS image_url
-                    FROM order_items oi
-                    LEFT JOIN merchandise m ON m.id = oi.item_id
-                    WHERE oi.order_id = %s
-                    """,
-                    (order_id,)
-                )
-                items = cursor.fetchall()
-                if items:
-                    for item in items:
-                        img = item.get('image_url') or ''
-                        if img and not img.startswith('/'):
-                            img = f'/static/images/{img}'
-                        purchases.append({
-                            'order_id': order_id,
-                            'total_amount': row['total_amount'],
-                            'status': row['status'],
-                            'payment_status': row['payment_status'],
-                            'payment_method': row['payment_method'],
-                            'created_at': row['created_at'],
-                            'reference_number': row.get('reference_number') or '',
-                            'quantity': item['quantity'],
-                            'price': item['price'],
-                            'item_name': item['item_name'],
-                            'image_url': img
-                        })
-                else:
-                    purchases.append({
-                        'order_id': order_id,
-                        'total_amount': row['total_amount'],
-                        'status': row['status'],
-                        'payment_status': row['payment_status'],
-                        'payment_method': row['payment_method'],
-                        'created_at': row['created_at'],
-                        'reference_number': row.get('reference_number') or '',
-                        'quantity': 1,
-                        'price': row['total_amount'],
-                        'item_name': 'Completed Order',
-                        'image_url': ''
-                    })
+                purchases.append(row)
+
+        # Also show completed payments (orders get deleted after completion)
+        cursor.execute("SELECT email FROM students WHERE student_id = %s", (student_id,))
+        student_row = cursor.fetchone()
+        student_email = student_row['email'] if student_row else None
+        if student_email:
+            cursor.execute(
+                """
+                SELECT
+                    id AS order_id,
+                    amount AS total_amount,
+                    'completed' AS status,
+                    'Success' AS payment_status,
+                    payment_method,
+                    payment_date AS created_at,
+                    reference_number,
+                    COALESCE(item_name, 'Completed Order') AS item_name,
+                    image_url
+                FROM payments
+                WHERE email = %s AND status = 'Success'
+                ORDER BY payment_date DESC, id DESC
+                """,
+                (student_email,)
+            )
+            for row in cursor.fetchall():
+                img = row.get('image_url') or ''
+                if img and not img.startswith('/'):
+                    img = f'/static/images/{img}'
+                purchases.append({
+                    'order_id': row['order_id'],
+                    'total_amount': row['total_amount'],
+                    'status': row['status'],
+                    'payment_status': row['payment_status'],
+                    'payment_method': row['payment_method'],
+                    'created_at': row['created_at'],
+                    'reference_number': row.get('reference_number') or '',
+                    'quantity': 1,
+                    'price': row['total_amount'],
+                    'item_name': row['item_name'],
+                    'image_url': img
+                })
 
         cursor.close()
         conn.close()
@@ -2990,6 +3030,10 @@ def instructor_my_purchases():
                     '' AS delivery_option,
                     '' AS delivery_address,
                     payment_date AS created_at,
+                    1 AS quantity,
+                    amount AS price,
+                    'Completed Order' AS item_name,
+                    '' AS image_url,
                     reference_number
                 FROM payments
                 WHERE email = %s AND status = 'Success'
@@ -2998,46 +3042,8 @@ def instructor_my_purchases():
                 (instructor_email,)
             )
             for row in cursor.fetchall():
-                order_id = row['order_id']
-                # Try to get original order items for product images
-                cursor.execute(
-                    """
-                    SELECT
-                        oi.quantity,
-                        oi.price,
-                        COALESCE(m.name, 'Completed Order') AS item_name,
-                        COALESCE(m.image_url, '') AS image_url
-                    FROM order_items oi
-                    LEFT JOIN merchandise m ON m.id = oi.item_id
-                    WHERE oi.order_id = %s
-                    """,
-                    (order_id,)
-                )
-                items = cursor.fetchall()
-                order_items = []
-                card_image = ''
-                if items:
-                    for item in items:
-                        img = item.get('image_url') or ''
-                        if img and not img.startswith('/'):
-                            img = f'/static/images/{img}'
-                        if not card_image:
-                            card_image = img
-                        order_items.append({
-                            'name': item['item_name'],
-                            'quantity': item['quantity'],
-                            'price': float(item['price'] or 0),
-                            'image_url': img
-                        })
-                else:
-                    order_items = [{
-                        'name': 'Completed Order',
-                        'quantity': 1,
-                        'price': float(row['total_amount'] or 0),
-                        'image_url': ''
-                    }]
                 purchases.append({
-                    'order_id': order_id,
+                    'order_id': row['order_id'],
                     'total_amount': float(row['total_amount'] or 0),
                     'status': row['status'],
                     'payment_status': row['payment_status'],
@@ -3046,8 +3052,60 @@ def instructor_my_purchases():
                     'delivery_address': row['delivery_address'],
                     'created_at': row['created_at'],
                     'reference_number': row.get('reference_number') or '',
-                    'image_url': card_image,
-                    'order_items': order_items
+                    'image_url': '',
+                    'order_items': [{
+                        'name': row['item_name'],
+                        'quantity': row['quantity'],
+                        'price': float(row['price'] or 0),
+                        'image_url': ''
+                    }]
+                })
+
+        # Also show completed payments (orders get deleted after completion)
+        instructor_email = session.get('email')
+        if instructor_email:
+            cursor.execute(
+                """
+                SELECT
+                    id AS order_id,
+                    amount AS total_amount,
+                    'completed' AS status,
+                    'Success' AS payment_status,
+                    payment_method,
+                    '' AS delivery_option,
+                    '' AS delivery_address,
+                    payment_date AS created_at,
+                    reference_number,
+                    COALESCE(item_name, 'Completed Order') AS item_name,
+                    image_url
+                FROM payments
+                WHERE email = %s AND status = 'Success'
+                ORDER BY payment_date DESC, id DESC
+                """,
+                (instructor_email,)
+            )
+            for row in cursor.fetchall():
+                img = row.get('image_url') or ''
+                if img and not img.startswith('/'):
+                    img = f'/static/images/{img}'
+                item_name = row.get('item_name') or 'Completed Order'
+                purchases.append({
+                    'order_id': row['order_id'],
+                    'total_amount': float(row['total_amount'] or 0),
+                    'status': row['status'],
+                    'payment_status': row['payment_status'],
+                    'payment_method': row['payment_method'],
+                    'delivery_option': row['delivery_option'],
+                    'delivery_address': row['delivery_address'],
+                    'created_at': row['created_at'],
+                    'reference_number': row.get('reference_number') or '',
+                    'image_url': img,
+                    'order_items': [{
+                        'name': item_name,
+                        'quantity': 1,
+                        'price': float(row['total_amount'] or 0),
+                        'image_url': img
+                    }]
                 })
 
         cursor.close()
@@ -3153,9 +3211,22 @@ def _ensure_schema():
                 reference_number VARCHAR(255) NULL,
                 status VARCHAR(50) DEFAULT 'Pending',
                 payment_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                item_name VARCHAR(255) NULL,
+                image_url VARCHAR(500) NULL,
                 UNIQUE (reference_number)
             )
         """)
+
+        # Add item_name and image_url if missing on existing payments table
+        for col in ('item_name', 'image_url'):
+            cursor.execute("""
+                SELECT COUNT(*) AS cnt FROM information_schema.columns
+                WHERE table_schema = 'public'
+                  AND table_name = 'payments'
+                  AND column_name = %s
+            """, (col,))
+            if cursor.fetchone()['cnt'] == 0:
+                cursor.execute(f"ALTER TABLE payments ADD COLUMN {col} VARCHAR(500) NULL")
 
         # Ensure cart_items table exists with both student_id and instructor_id
         cursor.execute("""
