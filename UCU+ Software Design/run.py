@@ -682,9 +682,9 @@ def process_signup():
         cursor.execute(query, (student_id, first_name, last_name, email, hashed_password, 'N/A'))
         conn.commit()
         
-        # After successful signup, before redirecting to login/dashboard:
-        generate_and_send_otp(student_id, email)
-        return redirect(f'/verify_otp/{student_id}')
+        # Redirect to login page after successful signup
+        flash('Account created successfully! Please log in.', 'success')
+        return redirect('/')
     except psycopg2.Error as err:
         flash(f"Database error: {err}", 'danger')
         return redirect('/signup')
@@ -2714,36 +2714,6 @@ def reset_password(user_id):
             conn.close()
 
     return render_template('ResetPassword.html', user_id=user_id, user_type=user_type)
-
-def generate_and_send_otp(user_id, email):
-    otp = str(random.randint(100000, 999999))
-    # Save OTP in the password_resets table
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    # Check if an existing OTP record exists for this user
-    cursor.execute("SELECT id FROM password_resets WHERE user_id = %s", (user_id,))
-    existing = cursor.fetchone()
-    
-    if existing:
-        # Update existing record
-        cursor.execute(
-            "UPDATE password_resets SET otp = %s, created_at = CURRENT_TIMESTAMP, expires_at = CURRENT_TIMESTAMP + INTERVAL '10 minutes', used = FALSE WHERE user_id = %s",
-            (otp, user_id)
-        )
-    else:
-        # Insert new record
-        cursor.execute(
-            "INSERT INTO password_resets (user_id, email, otp, expires_at, used) VALUES (%s, %s, %s, CURRENT_TIMESTAMP + INTERVAL '10 minutes', FALSE)",
-            (user_id, email, otp)
-        )
-    
-    conn.commit()
-    cursor.close()
-    conn.close()
-    
-    # Send OTP via email
-    send_email(email, "Your OTP Code", f"Your OTP is: {otp}. This code expires in 10 minutes.")
 
 @app.route('/verify_otp/<user_id>', methods=['GET', 'POST'])
 def verify_otp(user_id):
