@@ -363,9 +363,10 @@ def api_update_order_status(order_id: int):
         if new_status == 'completed':
             cursor.execute(
                 """
-                SELECT o.total_amount, o.payment_method, s.email AS student_email, '' AS instructor_email
+                SELECT o.total_amount, o.payment_method, s.email AS student_email, COALESCE(e.email, '') AS instructor_email
                 FROM orders o
                 LEFT JOIN students s ON s.student_id = o.student_id
+                LEFT JOIN educators e ON e.id = o.instructor_id
                 WHERE o.id = %s
                 """,
                 (order_id,),
@@ -381,8 +382,8 @@ def api_update_order_status(order_id: int):
                 existing = cursor.fetchone()
                 if existing:
                     cursor.execute(
-                        "UPDATE payments SET status='Success', payment_date=NOW() WHERE reference_number = %s",
-                        (ref,),
+                        "UPDATE payments SET email=%s, status='Success', payment_date=NOW() WHERE reference_number = %s",
+                        (email, ref),
                     )
                 else:
                     cursor.execute(
@@ -434,9 +435,10 @@ def api_update_order_payment_status(order_id: int):
         if new_status == 'Success':
             cursor.execute(
                 """
-                SELECT o.total_amount, o.payment_method, s.email AS student_email, '' AS instructor_email
+                SELECT o.total_amount, o.payment_method, s.email AS student_email, COALESCE(e.email, '') AS instructor_email
                 FROM orders o
                 LEFT JOIN students s ON s.student_id = o.student_id
+                LEFT JOIN educators e ON e.id = o.instructor_id
                 WHERE o.id = %s
                 """,
                 (order_id,),
@@ -452,8 +454,8 @@ def api_update_order_payment_status(order_id: int):
                 existing = cursor.fetchone()
                 if existing:
                     cursor.execute(
-                        "UPDATE payments SET status='Success', payment_date=NOW() WHERE reference_number = %s",
-                        (ref,),
+                        "UPDATE payments SET email=%s, status='Success', payment_date=NOW() WHERE reference_number = %s",
+                        (email, ref),
                     )
                 else:
                     cursor.execute(
@@ -2402,7 +2404,14 @@ def admin_payments():
                 o.instructor_id,
                 COALESCE(s.first_name, s2.first_name, '') AS first_name,
                 COALESCE(s.last_name, s2.last_name, '') AS last_name,
-                COALESCE(e.full_name, e2.full_name, '') AS instructor_name
+                COALESCE(e.full_name, e2.full_name, '') AS instructor_name,
+                CASE
+                    WHEN o.instructor_id IS NOT NULL THEN 'instructor'
+                    WHEN o.student_id IS NOT NULL THEN 'student'
+                    WHEN e2.id IS NOT NULL THEN 'instructor'
+                    WHEN s2.student_id IS NOT NULL THEN 'student'
+                    ELSE 'unknown'
+                END AS source
             FROM payments p
             LEFT JOIN orders o ON CONCAT('ORD-', o.id) = p.reference_number
             LEFT JOIN students s ON s.student_id = o.student_id
