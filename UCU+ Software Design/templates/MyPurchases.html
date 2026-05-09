@@ -60,7 +60,7 @@
                                 <span class="badge">Order #{{ purchase.order_id }}</span>
                                 <span class="order-date">{{ purchase.created_at|default('N/A') }}</span>
                             </div>
-                            <span class="status-badge {% if purchase.status == 'completed' %}status-completed{% elif purchase.status == 'processing' %}status-processing{% else %}status-pending{% endif %}">
+                            <span class="status-badge {% if purchase.status|lower == 'completed' %}status-completed{% elif purchase.status|lower == 'processing' %}status-processing{% else %}status-pending{% endif %}">
                                 {{ purchase.status|default('Pending')|title }}
                             </span>
                         </div>

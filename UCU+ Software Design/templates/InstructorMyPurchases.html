@@ -57,22 +57,33 @@
                                 <span class="badge">Order #{{ purchase.order_id }}</span>
                                 <span class="order-date">{{ purchase.created_at|default('N/A') }}</span>
                             </div>
-                            <span class="status-badge {% if purchase.status == 'completed' %}status-completed{% elif purchase.status == 'processing' %}status-processing{% else %}status-pending{% endif %}">
+                            <span class="status-badge {% if purchase.status|lower == 'completed' %}status-completed{% elif purchase.status|lower == 'processing' %}status-processing{% else %}status-pending{% endif %}">
                                 {{ purchase.status|default('Pending')|title }}
                             </span>
                         </div>
 
                         <div class="product-section">
-                            <div class="product-image">
-                                <img src="{{ purchase.image_url or url_for('static', filename='images/UCULOGO.png') }}" 
-                                     alt="Product">
+                            <div class="product-images">
+                                {% for item in purchase.order_items %}
+                                <div class="product-image">
+                                    <img src="{{ item.image_url or url_for('static', filename='images/UCULOGO.png') }}"
+                                         alt="{{ item.name }}">
+                                </div>
+                                {% else %}
+                                <div class="product-image">
+                                    <img src="{{ url_for('static', filename='images/UCULOGO.png') }}"
+                                         alt="Product">
+                                </div>
+                                {% endfor %}
                             </div>
                             <div class="product-details">
                                 {% for item in purchase.order_items %}
-                                <h3>{{ item.name }}</h3>
-                                <div class="quantity-price">
-                                    <span class="quantity"><i class="material-icons">shopping_bag</i> Qty: {{ item.quantity }}</span>
-                                    <span class="unit-price">₱{{ "%.2f"|format(item.price) }} each</span>
+                                <div class="item-row">
+                                    <h3>{{ item.name }}</h3>
+                                    <div class="quantity-price">
+                                        <span class="quantity"><i class="material-icons">shopping_bag</i> Qty: {{ item.quantity }}</span>
+                                        <span class="unit-price">₱{{ "%.2f"|format(item.price) }} each</span>
+                                    </div>
                                 </div>
                                 {% else %}
                                 <h3>N/A</h3>
@@ -379,6 +390,13 @@
             background: var(--light);
         }
 
+        .product-images {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            flex-shrink: 0;
+        }
+
         .product-image {
             width: 120px;
             height: 120px;
@@ -393,6 +411,15 @@
             width: 100%;
             height: 100%;
             object-fit: cover;
+            transition: transform 0.3s ease;
+        }
+
+        .item-row {
+            margin-bottom: 12px;
+        }
+
+        .item-row:last-child {
+            margin-bottom: 0;
         }
 
         .product-details {
