@@ -2956,7 +2956,8 @@ def _ensure_schema():
                 payment_method VARCHAR(50) NULL,
                 reference_number VARCHAR(255) NULL,
                 status VARCHAR(50) DEFAULT 'Pending',
-                payment_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                payment_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE (reference_number)
             )
         """)
 
@@ -3079,16 +3080,41 @@ def _ensure_schema():
             """)
 
         # Ensure unique constraints for ON CONFLICT clauses
+        # Check for ANY unique constraint/index on reference_number (not just by name)
         cursor.execute("""
-            SELECT COUNT(*) AS cnt FROM information_schema.table_constraints
-            WHERE table_schema = 'public' AND table_name = 'payments'
-              AND constraint_name = 'uq_payments_reference_number'
+            SELECT COUNT(*) AS cnt FROM information_schema.table_constraints tc
+            JOIN information_schema.constraint_column_usage ccu ON tc.constraint_name = ccu.constraint_name
+            WHERE tc.table_schema = 'public' AND tc.table_name = 'payments'
+              AND ccu.column_name = 'reference_number'
+              AND tc.constraint_type = 'UNIQUE'
         """)
-        if cursor.fetchone()["cnt"] == 0:
+        has_unique = cursor.fetchone()["cnt"] > 0
+        if not has_unique:
+            # Also check for unique indexes (not constraints)
             cursor.execute("""
-                ALTER TABLE payments
-                ADD CONSTRAINT uq_payments_reference_number UNIQUE (reference_number)
+                SELECT COUNT(*) AS cnt FROM pg_indexes
+                WHERE schemaname = 'public' AND tablename = 'payments'
+                  AND indexdef LIKE '%UNIQUE%' AND indexdef LIKE '%reference_number%'
             """)
+            has_unique = cursor.fetchone()["cnt"] > 0
+
+        if not has_unique:
+            try:
+                # Deduplicate payments by reference_number before adding constraint
+                cursor.execute("""
+                    DELETE FROM payments
+                    WHERE id NOT IN (
+                        SELECT MIN(id) FROM payments
+                        WHERE reference_number IS NOT NULL
+                        GROUP BY reference_number
+                    ) AND reference_number IS NOT NULL
+                """)
+                cursor.execute("""
+                    ALTER TABLE payments
+                    ADD CONSTRAINT uq_payments_reference_number UNIQUE (reference_number)
+                """)
+            except Exception as constraint_err:
+                print(f"[schema] Could not add payments unique constraint: {constraint_err}")
 
         cursor.execute("""
             SELECT COUNT(*) AS cnt FROM information_schema.table_constraints
