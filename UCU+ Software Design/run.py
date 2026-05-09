@@ -1941,8 +1941,8 @@ def process_order():
             # Create order.
             # Your local DB schema may include additional NOT NULL columns (e.g., payment_method),
             # so we detect available columns and build the INSERT accordingly.
-            cursor.execute("SHOW COLUMNS FROM orders")
-            order_columns = {col["Field"] for col in cursor.fetchall()}
+            cursor.execute("SELECT column_name FROM information_schema.columns WHERE table_name = 'orders'")
+            order_columns = {col["column_name"] for col in cursor.fetchall()}
 
             insert_cols = []
             insert_vals = []
