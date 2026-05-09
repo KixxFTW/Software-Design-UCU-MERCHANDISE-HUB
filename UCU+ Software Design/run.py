@@ -105,14 +105,14 @@ except ImportError:
 def get_google_provider_cfg():
     return requests.get(GOOGLE_DISCOVERY_URL).json()
 
-# Email sending function (using Resend HTTP API to bypass serverless SMTP blocking)
+# Email sending function (using SendGrid API - works on Vercel without SMTP)
 def send_email(to_email, subject, body):
     try:
-        api_key = os.environ.get('RESEND_API_KEY')
-        sender_email = os.environ.get('RESEND_FROM_EMAIL', 'onboarding@resend.dev')
+        api_key = os.environ.get('SENDGRID_API_KEY')
+        sender_email = os.environ.get('SENDGRID_FROM_EMAIL', 'valdezmarkjethro@gmail.com')
 
         if not api_key:
-            err = "RESEND_API_KEY environment variable is not set. Sign up at https://resend.com, get your API key, and add it to your environment variables."
+            err = "SENDGRID_API_KEY environment variable is not set. Sign up at https://sendgrid.com, get your API key, and add it to your environment variables."
             print(err)
             return False, err
 
@@ -120,14 +120,14 @@ def send_email(to_email, subject, body):
         import json
 
         data = json.dumps({
-            "from": sender_email,
-            "to": [to_email],
+            "personalizations": [{"to": [{"email": to_email}]}],
+            "from": {"email": sender_email},
             "subject": subject,
-            "text": body
+            "content": [{"type": "text/plain", "value": body}]
         }).encode('utf-8')
 
         req = urllib.request.Request(
-            "https://api.resend.com/emails",
+            "https://api.sendgrid.com/v3/mail/send",
             data=data,
             headers={
                 "Authorization": f"Bearer {api_key}",
@@ -137,12 +137,12 @@ def send_email(to_email, subject, body):
         )
 
         with urllib.request.urlopen(req) as response:
-            print(f"Email sent successfully to {to_email}: {response.read().decode()}")
+            print(f"Email sent successfully to {to_email}")
             return True, None
 
     except urllib.error.HTTPError as e:
         err_body = e.read().decode()
-        err_msg = f"Resend API error ({e.code}): {err_body}"
+        err_msg = f"SendGrid API error ({e.code}): {err_body}"
         print(err_msg)
         return False, err_msg
     except Exception as e:
