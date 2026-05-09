@@ -26,9 +26,9 @@ os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
 
 # Database configuration (Supabase PostgreSQL)
 DB_CONFIG = {
-    'host': 'db.rvbmzkxqvwjjzjhejvhf.supabase.co',
+    'host': 'aws-1-ca-central-1.pooler.supabase.com',
     'port': 5432,
-    'user': 'postgres',
+    'user': 'postgres.rvbmzkxqvwjjzjhejvhf',
     'password': 'boF98kmXXKVHAiu8',
     'dbname': 'postgres',
     'sslmode': 'require'
