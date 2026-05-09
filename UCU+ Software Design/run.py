@@ -362,10 +362,9 @@ def api_update_order_status(order_id: int):
         if new_status == 'completed':
             cursor.execute(
                 """
-                SELECT o.total_amount, o.payment_method, s.email AS student_email, e.email AS instructor_email
+                SELECT o.total_amount, o.payment_method, s.email AS student_email, '' AS instructor_email
                 FROM orders o
                 LEFT JOIN students s ON s.student_id = o.student_id
-                LEFT JOIN educators e ON e.id = o.instructor_id
                 WHERE o.id = %s
                 """,
                 (order_id,),
@@ -417,10 +416,9 @@ def api_update_order_payment_status(order_id: int):
         if new_status == 'Success':
             cursor.execute(
                 """
-                SELECT o.total_amount, o.payment_method, s.email AS student_email, e.email AS instructor_email
+                SELECT o.total_amount, o.payment_method, s.email AS student_email, '' AS instructor_email
                 FROM orders o
                 LEFT JOIN students s ON s.student_id = o.student_id
-                LEFT JOIN educators e ON e.id = o.instructor_id
                 WHERE o.id = %s
                 """,
                 (order_id,),
@@ -2279,14 +2277,13 @@ def admin_orders():
                 COALESCE(s.first_name, '') AS first_name,
                 COALESCE(s.last_name, o.student_id) AS last_name,
                 s.email AS student_email,
-                COALESCE(e.full_name, o.instructor_id) AS instructor_name,
-                e.email AS instructor_email,
+                o.instructor_id AS instructor_name,
+                '' AS instructor_email,
                 p.id AS payment_id,
                 p.reference_number AS payment_ref,
                 p.payment_date AS payment_date
             FROM orders o
             LEFT JOIN students s ON s.student_id = o.student_id
-            LEFT JOIN educators e ON e.id = o.instructor_id
             LEFT JOIN payments p ON p.reference_number = CONCAT('ORD-', o.id)
             WHERE NOT (o.status = 'Completed' AND o.payment_status = 'Success')
             ORDER BY o.created_at DESC, o.id DESC
@@ -2366,11 +2363,10 @@ def admin_payments():
                 o.id AS order_id,
                 COALESCE(s.first_name, '') AS first_name,
                 COALESCE(s.last_name, o.student_id) AS last_name,
-                COALESCE(e.full_name, o.instructor_id) AS instructor_name
+                o.instructor_id AS instructor_name
             FROM payments p
             LEFT JOIN orders o ON CONCAT('ORD-', o.id) = p.reference_number
             LEFT JOIN students s ON s.student_id = o.student_id
-            LEFT JOIN educators e ON e.id = o.instructor_id
             ORDER BY p.payment_date DESC, p.id DESC
             """
         )
@@ -2987,7 +2983,7 @@ def _ensure_schema():
                 ALTER COLUMN student_id DROP NOT NULL
             """)
 
-        # Ensure educators table has email column (needed for payment lookups)
+        # Ensure educators table has email and full_name columns (needed for lookups)
         cursor.execute("""
             SELECT COUNT(*) AS cnt FROM information_schema.columns
             WHERE table_schema = 'public'
@@ -2998,6 +2994,18 @@ def _ensure_schema():
             cursor.execute("""
                 ALTER TABLE educators
                 ADD COLUMN email VARCHAR(255) NULL
+            """)
+
+        cursor.execute("""
+            SELECT COUNT(*) AS cnt FROM information_schema.columns
+            WHERE table_schema = 'public'
+              AND table_name = 'educators'
+              AND column_name = 'full_name'
+        """)
+        if cursor.fetchone()["cnt"] == 0:
+            cursor.execute("""
+                ALTER TABLE educators
+                ADD COLUMN full_name VARCHAR(255) NULL
             """)
 
         conn.commit()
