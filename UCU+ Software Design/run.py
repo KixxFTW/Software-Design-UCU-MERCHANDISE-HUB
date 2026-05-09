@@ -123,11 +123,13 @@ def send_email(to_email, subject, body):
             server.login(sender_email, sender_password)
             server.sendmail(sender_email, to_email, msg.as_string())
             print(f"Email sent successfully to {to_email}")
-            return True
+            return True, None
             
     except Exception as e:
-        print(f"Error sending email: {str(e)}")
-        return False
+        err_msg = str(e)
+        print(f"Error sending email: {err_msg}")
+        traceback.print_exc()
+        return False, err_msg
 
 def _is_admin() -> bool:
     # Admin logic in this project is currently based on hardcoded student_id/course.
@@ -2617,14 +2619,14 @@ def forgot_password():
             conn.commit()
 
             # Send the OTP via email
-            email_sent = send_email(user['email'], "Password Reset OTP",
+            email_sent, email_err = send_email(user['email'], "Password Reset OTP",
                     f"Your OTP for resetting your password is: {otp}")
 
             if email_sent:
                 flash('An OTP has been sent to your email.', 'success')
                 return redirect(f'/reset_password/{uid}?type={user_type}')
             else:
-                flash('Failed to send OTP email. Please try again later.', 'danger')
+                flash(f'Failed to send OTP email: {email_err}', 'danger')
                 return redirect('/')
         else:
             flash('No account found with the provided information.', 'danger')
