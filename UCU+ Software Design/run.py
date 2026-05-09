@@ -304,7 +304,12 @@ def api_get_product(product_id: int):
         product = cursor.fetchone()
         if not product:
             return jsonify({'error': 'Product not found'}), 404
-        return jsonify(product)
+        
+        # Convert image_url to public URL
+        product_dict = dict(product)
+        product_dict['image_url'] = _to_public_image_url(product_dict.get('image_url'))
+        
+        return jsonify(product_dict)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
     finally:
