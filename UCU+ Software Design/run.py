@@ -304,12 +304,7 @@ def api_get_product(product_id: int):
         product = cursor.fetchone()
         if not product:
             return jsonify({'error': 'Product not found'}), 404
-        
-        # Convert image_url to public URL
-        product_dict = dict(product)
-        product_dict['image_url'] = _to_public_image_url(product_dict.get('image_url'))
-        
-        return jsonify(product_dict)
+        return jsonify(product)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
     finally:
@@ -1912,9 +1907,11 @@ def get_cart():
         cursor.close()
         conn.close()
 
-        # Normalize image URLs to full public URLs with Supabase support
+        # Normalize image URLs to full static paths
         for item in cart_items:
-            item['image_url'] = _to_public_image_url(item.get('image_url'))
+            img = item.get('image_url') or ''
+            if img and not img.startswith('/'):
+                item['image_url'] = f'/static/images/{img}'
         
         return jsonify({
             'success': True,
