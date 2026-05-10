@@ -139,3 +139,16 @@ CREATE TABLE IF NOT EXISTS notification_preferences (
     FOREIGN KEY (student_id) REFERENCES students(student_id)
     ON DELETE CASCADE
 );
+CREATE TABLE admin (
+    id SERIAL PRIMARY KEY,
+    first_name VARCHAR(255),
+    last_name VARCHAR(255),
+    email VARCHAR(255) UNIQUE NOT NULL,
+    student_id VARCHAR(50) UNIQUE,
+    password VARCHAR(255) NOT NULL,
+    course VARCHAR(255),
+    google_id VARCHAR(255),
+    google_email VARCHAR(255),
+    google_password VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
