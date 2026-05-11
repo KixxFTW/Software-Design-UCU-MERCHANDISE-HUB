@@ -127,7 +127,16 @@
                 <div class="card border-0 shadow-sm mb-4">
                     <div class="card-header bg-white d-flex justify-content-between align-items-center">
                         <h5 class="mb-0 text-gray-800">All Products</h5>
-                        <input type="text" class="form-control form-control-sm" placeholder="Search products..." id="productSearch" style="width: 200px;">
+                        <div class="d-flex gap-2">
+                            <select class="form-select form-select-sm" id="categoryFilter" style="width: 150px;">
+                                <option value="">All Categories</option>
+                                <option value="shirts">Shirts</option>
+                                <option value="hoodies">Hoodies</option>
+                                <option value="accessories">Accessories</option>
+                                <option value="other">Other</option>
+                            </select>
+                            <input type="text" class="form-control form-control-sm" placeholder="Search products..." id="productSearch" style="width: 200px;">
+                        </div>
                     </div>
                     <div class="card-body">
                         <div class="table-responsive">
@@ -622,14 +631,30 @@
         // Product search functionality
         const productSearchEl = document.getElementById('productSearch');
         if (productSearchEl) {
-            productSearchEl.addEventListener('input', function(e) {
-                const searchTerm = e.target.value.toLowerCase();
-                const rows = document.querySelectorAll('.table tbody tr');
+            productSearchEl.addEventListener('input', filterProducts);
+        }
+
+        // Category filter functionality
+        const categoryFilterEl = document.getElementById('categoryFilter');
+        if (categoryFilterEl) {
+            categoryFilterEl.addEventListener('change', filterProducts);
+        }
+
+        // Combined filter function
+        function filterProducts() {
+            const searchTerm = (document.getElementById('productSearch').value || '').toLowerCase();
+            const selectedCategory = (document.getElementById('categoryFilter').value || '').toLowerCase();
+            const rows = document.querySelectorAll('.table tbody tr');
+            
+            rows.forEach(row => {
+                const text = row.textContent.toLowerCase();
+                const categoryCell = row.querySelector('td:nth-child(7)');
+                const rowCategory = categoryCell ? categoryCell.textContent.toLowerCase().trim() : '';
                 
-                rows.forEach(row => {
-                    const text = row.textContent.toLowerCase();
-                    row.style.display = text.includes(searchTerm) ? '' : 'none';
-                });
+                const matchesSearch = text.includes(searchTerm);
+                const matchesCategory = !selectedCategory || rowCategory === selectedCategory;
+                
+                row.style.display = (matchesSearch && matchesCategory) ? '' : 'none';
             });
         }
 

@@ -482,7 +482,9 @@
             </div>
             <div class="departments">
                 <div class="dept-card">
-                    <img src="{{ url_for('static', filename='images/CEA CPE.png') }}" alt="Engineering Shirt">
+                    <a href="#" class="product-image-viewer" data-image-url="{{ url_for('static', filename='images/CEA CPE.png') }}" data-product-name="Computer Engineering Shirt">
+                        <img src="{{ url_for('static', filename='images/CEA CPE.png') }}" alt="Engineering Shirt" style="cursor: pointer; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                    </a>
                     <div class="dept-name">Computer Engineering Shirt</div>
                     <p>Official Computer Engineering department shirt featuring the iconic gear and circuit design emblem</p>
                     <p class="price">₱700</p>
@@ -654,12 +656,12 @@
                     <p>Premium quality water bottle featuring the JEAS emblem and engineering design elements</p>
                     <p class="price">₱700</p>
                     <select>
-                        <option>Select Size</option>
-                        <option>Small</option>
-                        <option>Medium</option>
-                        <option>Large</option>
-                        <option>X-Large</option>
-                        <option>2X-Large</option>
+                        <option>Quantity</option>
+                        <option>1</option>
+                        <option>2</option>
+                        <option>3</option>
+                        <option>4</option>
+                        <option>5</option>
                     </select>
                     <button class="add-to-cart" data-item='{"name": "CEA JEAS Water Bottle", "price": 700, "image": "CEA JEAS Bottle.png"}'>Add to Cart</button>
                 </div>
@@ -2499,5 +2501,51 @@ document.addEventListener('DOMContentLoaded', async function () {
     });
 });
 </script>
+
+<!-- Image Viewer Modal -->
+<div id="imageViewerModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 10000; justify-content: center; align-items: center;">
+    <div style="position: relative; max-width: 90%; max-height: 90%;">
+        <img id="imageViewerImage" src="" alt="Product Image" style="max-width: 100%; max-height: 90vh; object-fit: contain; border-radius: 8px;">
+        <button onclick="closeImageViewer()" style="position: absolute; top: -40px; right: 0; background: white; border: none; border-radius: 50%; width: 32px; height: 32px; cursor: pointer; font-size: 20px; font-weight: bold;">&times;</button>
+    </div>
+</div>
+
+<script>
+    // Image viewer functionality
+    document.addEventListener('DOMContentLoaded', function() {
+        // Make all dept-card images clickable
+        document.querySelectorAll('.dept-card img').forEach(img => {
+            img.style.cursor = 'pointer';
+            img.style.transition = 'transform 0.2s';
+            img.addEventListener('mouseover', function() {
+                this.style.transform = 'scale(1.05)';
+            });
+            img.addEventListener('mouseout', function() {
+                this.style.transform = 'scale(1)';
+            });
+            img.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                const imageUrl = this.src;
+                const productName = this.closest('.dept-card').querySelector('.dept-name').textContent;
+                
+                document.getElementById('imageViewerImage').src = imageUrl;
+                document.getElementById('imageViewerModal').style.display = 'flex';
+            });
+        });
+
+        // Close modal when clicking outside the image
+        document.getElementById('imageViewerModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeImageViewer();
+            }
+        });
+    });
+
+    function closeImageViewer() {
+        document.getElementById('imageViewerModal').style.display = 'none';
+    }
+</script>
+
 </body>
 </html>

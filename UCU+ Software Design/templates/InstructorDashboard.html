@@ -365,11 +365,13 @@
                 <div class="departments">
                     {% for item in merchandise %}
                     <div class="dept-card">
-                        <img src="{{ item.image_url or url_for('static', filename='images/UCULOGO.png') }}" alt="{{ item.name }}">
+                        <a href="#" class="product-image-viewer" data-image-url="{{ item.image_url or url_for('static', filename='images/UCULOGO.png') }}" data-product-name="{{ item.name }}">
+                            <img src="{{ item.image_url or url_for('static', filename='images/UCULOGO.png') }}" alt="{{ item.name }}" style="cursor: pointer; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                        </a>
                         <div class="dept-name">{{ item.name }}</div>
                         <p class="item-description">{{ item.description or 'No description available.' }}</p>
                         <p class="price">₱{{ "%.0f"|format(item.price) if item.price == item.price|int else "%.2f"|format(item.price) }}</p>
-                        {% if 'lace' in item.name|lower %}
+                        {% if 'lace' in item.name|lower or (item.category and item.category|lower == 'accessories') %}
                         <input type="number" class="item-qty" value="1" min="1" max="99">
                         {% else %}
                         <select class="item-size">
@@ -394,6 +396,14 @@
             <div class="disclaimer">
                 <p>Disclaimer: This dashboard is a school project and is not intended for official use. All data displayed is fictional and for demonstration purposes only.</p>
             </div>
+        </div>
+    </div>
+
+    <!-- Image Viewer Modal -->
+    <div id="imageViewerModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 10000; justify-content: center; align-items: center;">
+        <div style="position: relative; max-width: 90%; max-height: 90%;">
+            <img id="imageViewerImage" src="" alt="Product Image" style="max-width: 100%; max-height: 90vh; object-fit: contain; border-radius: 8px;">
+            <button onclick="closeImageViewer()" style="position: absolute; top: -40px; right: 0; background: white; border: none; border-radius: 50%; width: 32px; height: 32px; cursor: pointer; font-size: 20px; font-weight: bold;">&times;</button>
         </div>
     </div>
 
@@ -2040,4 +2050,31 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 });
+</script>
+<script>
+    // Image viewer functionality
+    document.addEventListener('DOMContentLoaded', function() {
+        // Add click handlers to product image viewers
+        document.querySelectorAll('.product-image-viewer').forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                const imageUrl = this.dataset.imageUrl;
+                const productName = this.dataset.productName;
+                
+                document.getElementById('imageViewerImage').src = imageUrl;
+                document.getElementById('imageViewerModal').style.display = 'flex';
+            });
+        });
+
+        // Close modal when clicking outside the image
+        document.getElementById('imageViewerModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeImageViewer();
+            }
+        });
+    });
+
+    function closeImageViewer() {
+        document.getElementById('imageViewerModal').style.display = 'none';
+    }
 </script>
