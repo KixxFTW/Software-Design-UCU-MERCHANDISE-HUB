@@ -2483,7 +2483,7 @@ def admin_products():
                 flash('Please provide valid product details.', 'danger')
                 return redirect('/admin/dashboard')
 
-            # Handle image upload to Supabase Storage (optional on edit, required on add in the template)
+            # Handle image upload to Supabase Storage or locally as fallback
             image = request.files.get('image')
             image_url = None
             if image and image.filename:
@@ -2491,8 +2491,9 @@ def admin_products():
                     # Generate unique filename
                     unique_filename = f"{uuid.uuid4()}_{secure_filename(image.filename)}"
                     
-                    # Upload to Supabase Storage
+                    # Try to upload to Supabase Storage first
                     if supabase:
+                        image.seek(0)
                         image_data = image.read()
                         response = supabase.storage.from_('products').upload(
                             path=unique_filename,
@@ -2502,12 +2503,25 @@ def admin_products():
                         # Get public URL
                         image_url = supabase.storage.from_('products').get_public_url(unique_filename)
                     else:
-                        flash('Supabase not configured. Cannot upload image.', 'warning')
-                        image_url = None
+                        # Fallback: Save locally to static/images folder
+                        upload_folder = os.path.join(os.path.dirname(__file__), 'static', 'images')
+                        os.makedirs(upload_folder, exist_ok=True)
+                        image.seek(0)
+                        image.save(os.path.join(upload_folder, unique_filename))
+                        image_url = f"/static/images/{unique_filename}"
                 except Exception as upload_err:
                     print(f"Image upload error: {upload_err}")
-                    flash(f'Warning: Could not upload image: {str(upload_err)}. Continuing without image.', 'warning')
-                    image_url = None
+                    # Fallback: Save locally if Supabase fails
+                    try:
+                        upload_folder = os.path.join(os.path.dirname(__file__), 'static', 'images')
+                        os.makedirs(upload_folder, exist_ok=True)
+                        image.seek(0)
+                        image.save(os.path.join(upload_folder, unique_filename))
+                        image_url = f"/static/images/{unique_filename}"
+                    except Exception as local_err:
+                        print(f"Local image save error: {local_err}")
+                        flash(f'Warning: Could not upload image: {str(upload_err)}. Continuing without image.', 'warning')
+                        image_url = None
 
             conn = get_db_connection()
             cursor = conn.cursor()
@@ -2536,7 +2550,7 @@ def admin_products():
                     )
                 conn.commit()
                 flash('Merchandise item updated successfully!', 'success')
-                return redirect('/admin/dashboard')
+                return redirect('/admin/products')
 
             # Add new merchandise item
             cursor.execute(
@@ -2548,7 +2562,7 @@ def admin_products():
             )
             conn.commit()
             flash('Merchandise item added successfully!', 'success')
-            return redirect('/admin/dashboard')
+            return redirect('/admin/products')
         except Exception as e:
             flash(f'Error saving merchandise item: {str(e)}', 'danger')
             return redirect('/admin/dashboard')
@@ -2581,9 +2595,10 @@ def admin_products():
         )
         products = cursor.fetchall()
         total_products = len(products)
-        low_stock_count = sum(1 for p in products if p['stock'] <= 5)
+        low_stock_products = [p for p in products if p['stock'] <= 5]
+        low_stock_count = len(low_stock_products)
         total_categories = len(set(p['category'] for p in products if p['category']))
-        return render_template('AdminProducts.html', products=products, total_products=total_products, low_stock_count=low_stock_count, total_categories=total_categories)
+        return render_template('AdminProducts.html', products=products, low_stock_products=low_stock_products, total_products=total_products, low_stock_count=low_stock_count, total_categories=total_categories)
     except Exception as e:
         flash(f"An error occurred: {e}", 'danger')
         return redirect('/admin/dashboard')

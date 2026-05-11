@@ -1,406 +1,188 @@
 <!DOCTYPE html>
-
 <html lang="en">
-
 <head>
-
     <meta charset="UTF-8">
-
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
     <title>Admin Users - UCU+ Merchandise Hub</title>
-
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-
+    <link href="https://fonts.googleapis.com/css?family=Ubuntu:400,700" rel="stylesheet">
     <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='images/UCULOGO.png') }}">
-
     <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='images/UCULOGO.png') }}">
-
 </head>
-
 <body>
+    <div class="area">
+        <ul class="circles">
+            <li></li>
+            <li></li>
+            <li></li>
+            <li></li>
+            <li></li>
+            <li></li>
+            <li></li>
+            <li></li>
+            <li></li>
+            <li></li>
+        </ul>
+    </div>
 
-    <div class="container-fluid">
-
-        <div class="row">
-
-            <!-- Mobile Navbar -->
-
-            <nav class="navbar navbar-expand-lg d-lg-none navbar-dark bg-primary">
-
-                <div class="container-fluid">
-
-                    <a class="navbar-brand" href="#">UCU+ Admin</a>
-
-                    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMobile" aria-controls="navbarMobile" aria-expanded="false" aria-label="Toggle navigation">
-
-                        <span class="navbar-toggler-icon"></span>
-
-                    </button>
-
-                    <div class="collapse navbar-collapse" id="navbarMobile">
-
-                        <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-
-                            <li class="nav-item">
-
-                                <a class="nav-link" href="/admin/dashboard">
-
-                                    <i class="fas fa-tachometer-alt me-2"></i>Dashboard
-
-                                </a>
-
-                            </li>
-
-                            <li class="nav-item">
-
-                                <a class="nav-link" href="/admin/products">
-
-                                    <i class="fas fa-box me-2"></i>Products
-
-                                </a>
-
-                            </li>
-
-                            <li class="nav-item">
-
-                                <a class="nav-link" href="/admin/orders">
-
-                                    <i class="fas fa-shopping-cart me-2"></i>Orders
-
-                                </a>
-
-                            </li>
-
-                            <li class="nav-item">
-
-                                <a class="nav-link active" href="/admin/users">
-
-                                    <i class="fas fa-users me-2"></i>Users
-
-                                </a>
-
-                            </li>
-
-                            <li class="nav-item">
-
-                                <a class="nav-link" href="/admin/payments">
-
-                                    <i class="fas fa-credit-card me-2"></i>Payments
-
-                                </a>
-
-                            </li>
-
-                            <li class="nav-item">
-
-                                <a class="nav-link" href="/logout">
-
-                                    <i class="fas fa-sign-out-alt me-2"></i>Logout
-
-                                </a>
-
-                            </li>
-
-                        </ul>
-
-                    </div>
-
-                </div>
-
-            </nav>
-
-
-
-            <!-- Sidebar for larger screens -->
-
-            <div class="col-lg-2 sidebar d-none d-lg-block p-3">
-
-                <h3 class="mb-4">Admin Panel</h3>
-
-                <ul class="nav flex-column">
-
-                    <li class="nav-item">
-
-                        <a class="nav-link" href="/admin/dashboard">
-
-                            <i class="fas fa-tachometer-alt me-2"></i>Dashboard
-
+    <div class="admin-layout">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <img src="{{ url_for('static', filename='images/logo2 (1).png') }}" alt="UCU Logo" class="sidebar-logo">
+                <h2 class="sidebar-title">Admin Panel</h2>
+            </div>
+            <nav class="sidebar-nav">
+                <ul class="nav-links">
+                    <li>
+                        <a href="/admin/dashboard" class="nav-link">
+                            <i class="fas fa-tachometer-alt"></i>
+                            <span>Dashboard</span>
                         </a>
-
                     </li>
-
-                    <li class="nav-item">
-
-                        <a class="nav-link" href="/admin/products">
-
-                            <i class="fas fa-box me-2"></i>Products
-
+                    <li>
+                        <a href="/admin/products" class="nav-link">
+                            <i class="fas fa-box"></i>
+                            <span>Products</span>
                         </a>
-
                     </li>
-
-                    <li class="nav-item">
-
-                        <a class="nav-link" href="/admin/orders">
-
-                            <i class="fas fa-shopping-cart me-2"></i>Orders
-
+                    <li>
+                        <a href="/admin/orders" class="nav-link">
+                            <i class="fas fa-shopping-cart"></i>
+                            <span>Orders</span>
                         </a>
-
                     </li>
-
-                    <li class="nav-item">
-
-                        <a class="nav-link active" href="/admin/users">
-
-                            <i class="fas fa-users me-2"></i>Users
-
+                    <li>
+                        <a href="/admin/users" class="nav-link active">
+                            <i class="fas fa-users"></i>
+                            <span>Users</span>
                         </a>
-
                     </li>
-
-                    <li class="nav-item">
-
-                        <a class="nav-link" href="/admin/payments">
-
-                            <i class="fas fa-credit-card me-2"></i>Payments
-
+                    <li>
+                        <a href="/admin/payments" class="nav-link">
+                            <i class="fas fa-credit-card"></i>
+                            <span>Payments</span>
                         </a>
-
                     </li>
-
-                    <li class="nav-item">
-
-                        <a class="nav-link" href="/logout">
-
-                            <i class="fas fa-sign-out-alt me-2"></i>Logout
-
+                    <li class="nav-divider"></li>
+                    <li>
+                        <a href="/logout" class="nav-link logout">
+                            <i class="fas fa-sign-out-alt"></i>
+                            <span>Logout</span>
                         </a>
-
                     </li>
-
                 </ul>
+            </nav>
+        </aside>
 
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 class="mb-0 text-gray-800">User Management</h2>
+                <a href="/admin/dashboard" class="btn btn-outline-primary btn-sm">
+                    <i class="fas fa-arrow-left me-1"></i>Back to Dashboard
+                </a>
             </div>
 
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
 
-
-            <!-- Main Content -->
-
-            <div class="col-12 col-lg-10 main-content">
-
-                <div class="d-flex justify-content-between align-items-center mb-4">
-
-                    <h2 class="mb-0 text-gray-800">User Management</h2>
-
-                    <a href="/admin/dashboard" class="btn btn-outline-primary btn-sm">
-
-                        <i class="fas fa-arrow-left me-1"></i>Back to Dashboard
-
-                    </a>
-
+            <!-- Statistics Cards -->
+            <div class="row g-3 mb-4">
+                <div class="col-md-4">
+                    <div class="stat-card bg-primary text-white">
+                        <h5>Total Users</h5>
+                        <h3>{{ total_users }}</h3>
+                    </div>
                 </div>
-
-
-
-                {% with messages = get_flashed_messages(with_categories=true) %}
-
-                    {% if messages %}
-
-                        {% for category, message in messages %}
-
-                            <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
-
-                                {{ message }}
-
-                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-
-                            </div>
-
-                        {% endfor %}
-
-                    {% endif %}
-
-                {% endwith %}
-
-
-
-                <!-- Statistics Cards -->
-
-                <div class="row g-3 mb-4">
-
-                    <div class="col-md-4">
-
-                        <div class="stat-card bg-primary text-white">
-
-                            <h5>Total Users</h5>
-
-                            <h3>{{ total_users }}</h3>
-
-                        </div>
-
+                <div class="col-md-4">
+                    <div class="stat-card bg-success text-white">
+                        <h5>Total Students</h5>
+                        <h3>{{ total_students }}</h3>
                     </div>
-
-                    <div class="col-md-4">
-
-                        <div class="stat-card bg-success text-white">
-
-                            <h5>Total Students</h5>
-
-                            <h3>{{ total_students }}</h3>
-
-                        </div>
-
-                    </div>
-
-                    <div class="col-md-4">
-
-                        <div class="stat-card bg-info text-white">
-
-                            <h5>Total Instructors</h5>
-
-                            <h3>{{ total_instructors }}</h3>
-
-                        </div>
-
-                    </div>
-
                 </div>
-
-
-
-                <!-- Students Section -->
-
-                <div class="card border-0 shadow-sm mb-4">
-
-                    <div class="card-header bg-white d-flex justify-content-between align-items-center">
-
-                        <h5 class="mb-0 text-gray-800">Students</h5>
-
-                        <input type="text" class="form-control form-control-sm" placeholder="Search students..." id="studentSearch" style="width: 200px;">
-
+                <div class="col-md-4">
+                    <div class="stat-card bg-info text-white">
+                        <h5>Total Instructors</h5>
+                        <h3>{{ total_instructors }}</h3>
                     </div>
-
-                    <div class="card-body">
-
-                        <div class="table-responsive">
-
-                            <table class="table table-striped align-middle mb-0">
-
-                                <thead>
-
-                                    <tr>
-
-                                        <th>Student ID</th>
-
-                                        <th>Name</th>
-
-                                        <th>Email</th>
-
-                                        <th>Course</th>
-
-                                        <th>Enrollment Date</th>
-
-                                        <th>Actions</th>
-
-                                    </tr>
-
-                                </thead>
-
-                                <tbody>
-
-                                    {% for user in student_users %}
-
-                                    <tr>
-
-                                        <td>{{ user.account_id }}</td>
-
-                                        <td>{{ user.first_name }} {{ user.last_name }}</td>
-
-                                        <td>{{ user.email }}</td>
-
-                                        <td>{{ user.course or 'N/A' }}</td>
-
-                                        <td>{{ user.created_at.strftime('%Y-%m-%d') if user.created_at else 'N/A' }}</td>
-
-                                        <td>
-
-                                            <div class="btn-group btn-group-sm">
-
-                                                <button class="btn btn-primary view-user" data-id="{{ user.account_id }}" data-bs-toggle="modal" data-bs-target="#viewUserModal">
-
-                                                    <i class="fas fa-eye"></i>
-
-                                                </button>
-
-                                                <button class="btn btn-warning edit-user" data-id="{{ user.account_id }}" data-bs-toggle="modal" data-bs-target="#editUserModal">
-
-                                                    <i class="fas fa-edit"></i>
-
-                                                </button>
-
-                                                <button class="btn btn-danger delete-user" data-id="{{ user.account_id }}">
-
-                                                    <i class="fas fa-trash"></i>
-
-                                                </button>
-
-                                            </div>
-
-                                        </td>
-
-                                    </tr>
-
-                                    {% else %}
-
-                                    <tr>
-
-                                        <td colspan="6" class="text-center text-muted py-4">No student accounts found.</td>
-
-                                    </tr>
-
-                                    {% endfor %}
-
-                                </tbody>
-
-                            </table>
-
-                        </div>
-
-                    </div>
-
                 </div>
+            </div>
 
-
-
-                <!-- Instructors Section -->
-
-                <div class="card border-0 shadow-sm">
-
-                    <div class="card-header bg-white d-flex justify-content-between align-items-center">
-
-                        <h5 class="mb-0 text-gray-800">Instructors</h5>
-
-                        <input type="text" class="form-control form-control-sm" placeholder="Search instructors..." id="instructorSearch" style="width: 200px;">
-
+            <!-- Students Section -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0 text-gray-800">Students</h5>
+                    <input type="text" class="form-control form-control-sm" placeholder="Search students..." id="studentSearch" style="width: 200px;">
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Student ID</th>
+                                    <th>Name</th>
+                                    <th>Email</th>
+                                    <th>Course</th>
+                                    <th>Registration Date</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for user in student_users %}
+                                <tr>
+                                    <td>{{ user.account_id }}</td>
+                                    <td>{{ user.first_name }} {{ user.last_name }}</td>
+                                    <td>{{ user.email }}</td>
+                                    <td>{{ user.course or 'N/A' }}</td>
+                                    <td>{{ user.created_at.strftime('%Y-%m-%d') if user.created_at else 'N/A' }}</td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            <button class="btn btn-primary view-user" data-id="{{ user.account_id }}" data-bs-toggle="modal" data-bs-target="#viewUserModal">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                            <button class="btn btn-warning edit-user" data-id="{{ user.account_id }}" data-bs-toggle="modal" data-bs-target="#editUserModal">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button class="btn btn-danger delete-user" data-id="{{ user.account_id }}">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="6" class="text-center text-muted py-4">No student accounts found.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
                     </div>
+                </div>
+            </div>
 
-                    <div class="card-body">
-
-                        <div class="table-responsive">
-
-                            <table class="table table-striped align-middle mb-0">
-
-                                <thead>
-
-                                    <tr>
-
-                                        <th>Instructor ID</th>
-
-                                        <th>Name</th>
+            <!-- Instructors Section -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0 text-gray-800">Instructors</h5>
+                    <input type="text" class="form-control form-control-sm" placeholder="Search instructors..." id="instructorSearch" style="width: 200px;">
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Instructor ID</th>
+                                    <th>Name</th>
 
                                         <th>Email</th>
 
@@ -1301,8 +1083,301 @@
         }
 
     </script>
+    </main>
+    </div>
 
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Ubuntu', sans-serif;
+            background: transparent;
+            min-height: 100vh;
+        }
+
+        /* Animated Background */
+        .area {
+            background: rgb(72, 78, 202);
+            background: -webkit-linear-gradient(to left, #8f94fb, #4e54c8);
+            width: 100%;
+            min-height: 100vh;
+            position: fixed;
+            z-index: -1;
+        }
+
+        .circles {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        .circles li {
+            position: absolute;
+            display: block;
+            list-style: none;
+            width: 20px;
+            height: 20px;
+            background: rgba(255, 255, 255, 0.2);
+            animation: animate 25s linear infinite;
+            bottom: -150px;
+        }
+
+        .circles li:nth-child(1) { left: 25%; width: 80px; height: 80px; animation-delay: 0s; }
+        .circles li:nth-child(2) { left: 10%; width: 20px; height: 20px; animation-delay: 2s; animation-duration: 12s; }
+        .circles li:nth-child(3) { left: 70%; width: 20px; height: 20px; animation-delay: 4s; }
+        .circles li:nth-child(4) { left: 40%; width: 60px; height: 60px; animation-delay: 0s; animation-duration: 18s; }
+        .circles li:nth-child(5) { left: 65%; width: 20px; height: 20px; animation-delay: 0s; }
+        .circles li:nth-child(6) { left: 75%; width: 110px; height: 110px; animation-delay: 3s; }
+        .circles li:nth-child(7) { left: 35%; width: 150px; height: 150px; animation-delay: 7s; }
+        .circles li:nth-child(8) { left: 50%; width: 25px; height: 25px; animation-delay: 15s; animation-duration: 45s; }
+        .circles li:nth-child(9) { left: 20%; width: 15px; height: 15px; animation-delay: 2s; animation-duration: 35s; }
+        .circles li:nth-child(10) { left: 85%; width: 150px; height: 150px; animation-delay: 0s; animation-duration: 11s; }
+
+        @keyframes animate {
+            0% { transform: translateY(0) rotate(0deg); opacity: 1; border-radius: 0; }
+            100% { transform: translateY(-1000px) rotate(720deg); opacity: 0; border-radius: 50%; }
+        }
+
+        /* Admin Layout */
+        .admin-layout {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 280px;
+            background: rgba(30, 30, 60, 0.85);
+            backdrop-filter: blur(10px);
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            position: fixed;
+            height: 100vh;
+            left: 0;
+            top: 0;
+            z-index: 1000;
+            border-right: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .sidebar-header {
+            padding: 30px 25px;
+            text-align: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .sidebar-logo {
+            width: 80px;
+            height: auto;
+            margin-bottom: 15px;
+        }
+
+        .sidebar-title {
+            color: white;
+            font-size: 1.4rem;
+            font-weight: 700;
+            margin: 0;
+        }
+
+        .sidebar-nav {
+            flex: 1;
+            padding: 20px 0;
+            overflow-y: auto;
+        }
+
+        .nav-links {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .nav-links li {
+            margin: 0;
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            padding: 15px 25px;
+            color: rgba(255, 255, 255, 0.7);
+            text-decoration: none;
+            transition: all 0.3s ease;
+            border-left: 3px solid transparent;
+        }
+
+        .nav-link:hover {
+            color: white;
+            background: rgba(255, 255, 255, 0.1);
+            border-left-color: #ffee00;
+        }
+
+        .nav-link.active {
+            color: white;
+            background: rgba(255, 255, 255, 0.15);
+            border-left-color: #ffee00;
+        }
+
+        .nav-link i {
+            width: 25px;
+            font-size: 1.1rem;
+        }
+
+        .nav-link span {
+            margin-left: 12px;
+            font-weight: 500;
+        }
+
+        .nav-link.logout {
+            color: #ff6b6b;
+        }
+
+        .nav-link.logout:hover {
+            color: #ff5252;
+            background: rgba(255, 107, 107, 0.1);
+        }
+
+        .nav-divider {
+            height: 1px;
+            background: rgba(255, 255, 255, 0.1);
+            margin: 15px 25px;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            margin-left: 280px;
+            padding: 30px 40px;
+            min-height: 100vh;
+        }
+
+        /* Content Cards */
+        .card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 16px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+            border: none;
+            margin-bottom: 25px;
+            backdrop-filter: blur(10px);
+        }
+
+        .card-header {
+            background: transparent;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+            padding: 20px 25px;
+            border-radius: 16px 16px 0 0;
+        }
+
+        .card-header h5 {
+            color: #333;
+            font-weight: 700;
+            margin: 0;
+        }
+
+        .card-body {
+            padding: 25px;
+        }
+
+        /* Tables */
+        .table {
+            background: transparent;
+        }
+
+        .table thead th {
+            background: rgba(78, 84, 200, 0.1);
+            border-bottom: 2px solid #4e54c8;
+            color: #4e54c8;
+            font-weight: 700;
+            padding: 15px;
+        }
+
+        .table tbody td {
+            padding: 15px;
+            vertical-align: middle;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+        }
+
+        .table tbody tr:hover {
+            background: rgba(78, 84, 200, 0.05);
+        }
+
+        /* Buttons */
+        .btn-primary {
+            background: linear-gradient(135deg, #4e54c8, #8f94fb);
+            border: none;
+            font-weight: 600;
+            padding: 10px 20px;
+            border-radius: 8px;
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #3d44a5, #7a82e0);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(78, 84, 200, 0.3);
+        }
+
+        /* Section Headers */
+        h2.text-gray-800 {
+            color: white;
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 30px;
+        }
+
+        /* Responsive */
+        @media (max-width: 992px) {
+            .sidebar {
+                transform: translateX(-100%);
+                transition: transform 0.3s ease;
+            }
+
+            .sidebar.active {
+                transform: translateX(0);
+            }
+
+            .main-content {
+                margin-left: 0;
+                padding: 20px;
+            }
+
+            .mobile-toggle {
+                display: block !important;
+            }
+        }
+
+        @media (min-width: 993px) {
+            .mobile-toggle {
+                display: none !important;
+            }
+        }
+
+        /* Mobile Toggle Button */
+        .mobile-toggle {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 1001;
+            background: rgba(78, 84, 200, 0.9);
+            border: none;
+            color: white;
+            padding: 12px 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: none;
+        }
+
+        .mobile-toggle:hover {
+            background: rgba(78, 84, 200, 1);
+        }
+    </style>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
-
 </html>
 
