@@ -362,6 +362,15 @@
                 <div class="intro">
                     <p>Show your department pride with our official department shirts! Each shirt features the department name and logo.</p>
                 </div>
+                <div class="search-sort-container">
+                    <input type="text" id="merchSearch" class="search-input" placeholder="Search merchandise...">
+                    <select id="merchSort" class="sort-select">
+                        <option value="default">Sort by: Default</option>
+                        <option value="category-shirts">Category: Shirts</option>
+                        <option value="category-accessories">Category: Accessories</option>
+                        <option value="category-all">Category: All</option>
+                    </select>
+                </div>
                 <div class="departments">
                     {% for item in merchandise %}
                     <div class="dept-card">
@@ -610,6 +619,43 @@
             gap: 1.5rem;
             margin-top: 1rem;
             padding: 1rem;
+        }
+
+        .search-sort-container {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .search-input {
+            flex: 1;
+            min-width: 200px;
+            padding: 12px 16px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .sort-select {
+            padding: 12px 16px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 14px;
+            background: white;
+            cursor: pointer;
+            transition: border-color 0.3s;
+        }
+
+        .sort-select:focus {
+            outline: none;
+            border-color: var(--primary);
         }
         
         .dept-card {
@@ -1606,7 +1652,7 @@
             }
 
             .main-content {
-                margin-left: 70px; /* Match sidebar width */
+                margin-left: 100px; /* Match sidebar width */
                 margin-bottom: 0;
                 width: calc(100% - 70px);
                 padding: 15px;
@@ -1653,6 +1699,11 @@
 
             .sidebar .nav-item i {
                 font-size: 20px;
+            }
+
+            .main-content {
+                transform: scale(0.8);
+                transform-origin: top left;
             }
 
             .dept-card img {
@@ -2082,21 +2133,64 @@ document.addEventListener('DOMContentLoaded', function() {
                 e.preventDefault();
                 const imageUrl = this.dataset.imageUrl;
                 const productName = this.dataset.productName;
-                
+
                 document.getElementById('imageViewerImage').src = imageUrl;
                 document.getElementById('imageViewerModal').style.display = 'flex';
             });
         });
-
-        // Close modal when clicking outside the image
-        document.getElementById('imageViewerModal').addEventListener('click', function(e) {
-            if (e.target === this) {
-                closeImageViewer();
-            }
-        });
     });
+</script>
 
-    function closeImageViewer() {
-        document.getElementById('imageViewerModal').style.display = 'none';
-    }
+<script>
+    // Search and sort functionality for merchandise
+    document.addEventListener('DOMContentLoaded', function() {
+        const searchInput = document.getElementById('merchSearch');
+        const sortSelect = document.getElementById('merchSort');
+        const deptCards = document.querySelectorAll('.dept-card');
+
+        function filterAndSortMerchandise() {
+            const searchTerm = searchInput.value.toLowerCase();
+            const sortValue = sortSelect.value;
+
+            // Convert NodeList to array for sorting
+            let cardsArray = Array.from(deptCards);
+
+            // Filter based on search term and category
+            cardsArray.forEach(card => {
+                const name = card.querySelector('.dept-name').textContent.toLowerCase();
+                const description = card.querySelector('.item-description').textContent.toLowerCase();
+
+                // Determine category based on item name
+                const isAccessory = name.includes('lace') || name.includes('id lace');
+
+                let matchesSearch = name.includes(searchTerm) || description.includes(searchTerm);
+                let matchesCategory = true;
+
+                // Filter by category
+                if (sortValue === 'category-shirts') {
+                    matchesCategory = !isAccessory;
+                } else if (sortValue === 'category-accessories') {
+                    matchesCategory = isAccessory;
+                }
+                // category-all shows everything
+
+                if (matchesSearch && matchesCategory) {
+                    card.style.display = 'flex';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+
+            // Get visible cards only
+            const visibleCards = cardsArray.filter(card => card.style.display !== 'none');
+
+            // Reorder cards in DOM
+            const container = document.querySelector('.departments');
+            visibleCards.forEach(card => container.appendChild(card));
+        }
+
+        // Event listeners
+        searchInput.addEventListener('input', filterAndSortMerchandise);
+        sortSelect.addEventListener('change', filterAndSortMerchandise);
+    });
 </script>

@@ -806,25 +806,13 @@
             .purchases-grid {
                 grid-template-columns: 1fr;
             }
-
-            .status-section {
-                grid-template-columns: 1fr;
-            }
-
-            .product-section {
-                flex-direction: column;
-                align-items: center;
-                text-align: center;
-            }
-
-            .sidebar {
-                margin-top: 0;
-            }
         }
 
-        /* Scrollbar */
-        .main-content::-webkit-scrollbar {
-            width: 8px;
+        @media (max-width: 576px) {
+            .main-content {
+                transform: scale(0.65);
+                transform-origin: top left;
+            }
         }
 
         .main-content::-webkit-scrollbar-track {

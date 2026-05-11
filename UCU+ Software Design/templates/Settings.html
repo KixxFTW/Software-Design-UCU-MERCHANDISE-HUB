@@ -749,39 +749,33 @@
             .sidebar {
                 width: 70px;
             }
-            
+
             .sidebar .logo h1,
             .sidebar .nav-item span {
                 display: none;
             }
-            
+
             .sidebar:hover {
                 width: 70px;
             }
-            
+
             .sidebar:hover .logo h1,
             .sidebar:hover .nav-item span {
                 display: none;
             }
-            
+
             .main-content {
                 margin-left: 70px;
             }
-            
-            .sidebar:hover + .main-content {
-                margin-left: 70px;
-            }
-            
-            .header {
-                flex-direction: column;
-                align-items: flex-start;
-            }
-            
-            .user-info {
-                margin-top: 15px;
+        }
+
+        @media (max-width: 576px) {
+            .main-content {
+                transform: scale(0.65);
+                transform-origin: top left;
             }
         }
-        
+
         /* Footer and Disclaimer */
         footer {
             text-align: center;
