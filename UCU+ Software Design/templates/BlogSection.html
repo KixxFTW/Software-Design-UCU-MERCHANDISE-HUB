@@ -53,64 +53,119 @@
         </div>
     </header>
 
-    <div class="container my-5">
-        <div class="row">
-            <!-- Featured Blog Post -->
-            <div class="col-12 mb-4">
-                <div class="card blog-card">
-                    <img src="{{ url_for('static', filename='images/featured-blog.jpg') }}" class="card-img-top blog-image" alt="Featured Post">
-                    <div class="card-body">
-                        <span class="badge bg-primary mb-2">Featured</span>
-                        <h2 class="card-title">Latest Updates on UCU+ Platform</h2>
-                        <p class="blog-date">May 17, 2025</p>
-                        <p class="card-text">Discover the new features and improvements we've added to enhance your UCU+ experience.</p>
-                        <div class="blog-author">
-                            <img src="{{ url_for('static', filename='images/admin-avatar.jpg') }}" class="author-avatar" alt="Admin">
-                            <div>
-                                <strong>Admin</strong>
-                                <small class="text-muted d-block">Platform Administrator</small>
-                            </div>
-                        </div>
+    <div class="blog-container">
+        <!-- Featured Post - Large -->
+        <div class="featured-post">
+            <div class="featured-image-wrapper">
+                <img src="{{ url_for('static', filename='images/featured-blog.jpg') }}" alt="Featured Post">
+                <div class="featured-overlay"></div>
+                <div class="featured-content">
+                    <span class="badge featured-badge">Featured</span>
+                    <h2 class="featured-title">Latest Updates on UCU+ Platform</h2>
+                    <p class="featured-excerpt">Discover the new features and improvements we've added to enhance your UCU+ experience.</p>
+                    <div class="featured-meta">
+                        <span class="meta-date">May 17, 2025</span>
+                        <span class="meta-divider">•</span>
+                        <span class="meta-author">Admin</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Blog Grid -->
+        <div class="blog-grid">
+            <!-- Post 1 -->
+            <div class="blog-card">
+                <div class="card-image">
+                    <img src="{{ url_for('static', filename='images/merch-update.jpg') }}" alt="Merchandise Update">
+                    <span class="category-badge merchandise">Merchandise</span>
+                </div>
+                <div class="card-content">
+                    <h3 class="card-title">New Department Shirts Available</h3>
+                    <p class="card-excerpt">Check out the latest department shirt designs now available in our store.</p>
+                    <div class="card-meta">
+                        <span class="meta-date">May 15, 2025</span>
+                        <a href="#" class="read-more">Read More →</a>
                     </div>
                 </div>
             </div>
 
-            <!-- Regular Blog Posts -->
-            <div class="col-md-4">
-                <div class="card blog-card">
-                    <img src="{{ url_for('static', filename='images/merch-update.jpg') }}" class="card-img-top blog-image" alt="Merchandise Update">
-                    <div class="card-body">
-                        <span class="badge bg-success mb-2">Merchandise</span>
-                        <h5 class="card-title">New Department Shirts Available</h5>
-                        <p class="blog-date">May 15, 2025</p>
-                        <p class="card-text">Check out the latest department shirt designs now available in our store.</p>
-                        <a href="#" class="btn btn-outline-primary">Read More</a>
+            <!-- Post 2 -->
+            <div class="blog-card">
+                <div class="card-image">
+                    <img src="https://img.freepik.com/free-vector/nfc-technology-concept-illustration_114360-14387.jpg?t=st=1747836326~exp=1747839926~hmac=5f658c1762d4cff6e91b06bb86c9d400c80c89533af03abf638cc2af40fab508&w=900" alt="Payment System">
+                    <span class="category-badge updates">Updates</span>
+                </div>
+                <div class="card-content">
+                    <h3 class="card-title">Enhanced Payment System</h3>
+                    <p class="card-excerpt">We've upgraded our payment system for a better shopping experience.</p>
+                    <div class="card-meta">
+                        <span class="meta-date">May 10, 2025</span>
+                        <a href="#" class="read-more">Read More →</a>
                     </div>
                 </div>
             </div>
 
-            <div class="col-md-4">
-                <div class="card blog-card">
-                    <img src="https://img.freepik.com/free-vector/nfc-technology-concept-illustration_114360-14387.jpg?t=st=1747836326~exp=1747839926~hmac=5f658c1762d4cff6e91b06bb86c9d400c80c89533af03abf638cc2af40fab508&w=900" class="card-img-top blog-image" alt="Payment System">
-                    <div class="card-body">
-                        <span class="badge bg-info mb-2">Updates</span>
-                        <h5 class="card-title">Enhanced Payment System</h5>
-                        <p class="blog-date">May 10, 2025</p>
-                        <p class="card-text">We've upgraded our payment system for a better shopping experience.</p>
-                        <a href="#" class="btn btn-outline-primary">Read More</a>
+            <!-- Post 3 -->
+            <div class="blog-card">
+                <div class="card-image">
+                    <img src="https://www.callcentrehelper.com/images/stories/2017/04/Security-Padlock-With-Online-Markings-760-1.jpg" alt="Security Update">
+                    <span class="category-badge security">Security</span>
+                </div>
+                <div class="card-content">
+                    <h3 class="card-title">Security Improvements</h3>
+                    <p class="card-excerpt">Learn about our latest security enhancements to protect your data.</p>
+                    <div class="card-meta">
+                        <span class="meta-date">May 5, 2025</span>
+                        <a href="#" class="read-more">Read More →</a>
                     </div>
                 </div>
             </div>
 
-            <div class="col-md-4">
-                <div class="card blog-card">
-                    <img src="https://www.callcentrehelper.com/images/stories/2017/04/Security-Padlock-With-Online-Markings-760-1.jpg" class="card-img-top blog-image" alt="Security Update">
-                    <div class="card-body">
-                        <span class="badge bg-warning mb-2">Security</span>
-                        <h5 class="card-title">Security Improvements</h5>
-                        <p class="blog-date">May 5, 2025</p>
-                        <p class="card-text">Learn about our latest security enhancements to protect your data.</p>
-                        <a href="#" class="btn btn-outline-primary">Read More</a>
+            <!-- Post 4 -->
+            <div class="blog-card">
+                <div class="card-image">
+                    <img src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=800" alt="Events">
+                    <span class="category-badge events">Events</span>
+                </div>
+                <div class="card-content">
+                    <h3 class="card-title">Upcoming Campus Events</h3>
+                    <p class="card-excerpt">Join us for exciting events happening around the campus this month.</p>
+                    <div class="card-meta">
+                        <span class="meta-date">May 2, 2025</span>
+                        <a href="#" class="read-more">Read More →</a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Post 5 -->
+            <div class="blog-card">
+                <div class="card-image">
+                    <img src="https://images.unsplash.com/photo-1523580494863-6f3031224c94?w=800" alt="Academics">
+                    <span class="category-badge academics">Academics</span>
+                </div>
+                <div class="card-content">
+                    <h3 class="card-title">Academic Calendar Updates</h3>
+                    <p class="card-excerpt">Important dates and deadlines for the upcoming semester have been announced.</p>
+                    <div class="card-meta">
+                        <span class="meta-date">April 28, 2025</span>
+                        <a href="#" class="read-more">Read More →</a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Post 6 -->
+            <div class="blog-card">
+                <div class="card-image">
+                    <img src="https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=800" alt="Achievements">
+                    <span class="category-badge achievements">Achievements</span>
+                </div>
+                <div class="card-content">
+                    <h3 class="card-title">Student Achievements</h3>
+                    <p class="card-excerpt">Celebrating our students' outstanding accomplishments in various fields.</p>
+                    <div class="card-meta">
+                        <span class="meta-date">April 20, 2025</span>
+                        <a href="#" class="read-more">Read More →</a>
                     </div>
                 </div>
             </div>
@@ -163,57 +218,285 @@
             /* Desktop styles */
         }
         .blog-header {
-        background: transparent;
-        color: white;
-        padding: 10px 0;
-        text-align: center;
-        margin-top: 90px; /* Add space below navbar */
-        width: 100%;
-    }
-        .blog header h1 {
+            background: transparent;
+            color: white;
+            padding: 20px 0;
             text-align: center;
-            font-size: 2.5rem;
-            margin-bottom: 10px;
-        }
-        .blog-card {
-            transition: transform 0.3s;
-            margin-bottom: 30px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin-top: 90px;
+            width: 100%;
         }
         
-        .blog-card:hover {
-            transform: translateY(-5px);
+        .blog-header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+        
+        .blog-header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
         }
 
-        .blog-image {
-            height: 200px;
+        /* Blog Container */
+        .blog-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 30px 20px 60px;
+        }
+
+        /* Featured Post */
+        .featured-post {
+            margin-bottom: 50px;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .featured-image-wrapper {
+            position: relative;
+            width: 100%;
+            height: 450px;
+            overflow: hidden;
+        }
+
+        .featured-image-wrapper img {
+            width: 100%;
+            height: 100%;
             object-fit: cover;
         }
 
-        .blog-date {
-            color: #666;
-            font-size: 0.9rem;
+        .featured-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(to top, rgba(78, 84, 200, 0.95) 0%, rgba(78, 84, 200, 0.5) 50%, rgba(78, 84, 200, 0.2) 100%);
         }
 
-        .blog-author {
+        .featured-content {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 40px;
+            color: white;
+        }
+
+        .featured-badge {
+            background: #ffee00;
+            color: #4e54c8;
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 15px;
+            display: inline-block;
+        }
+
+        .featured-title {
+            font-size: 2.2rem;
+            font-weight: 700;
+            margin-bottom: 15px;
+            line-height: 1.2;
+        }
+
+        .featured-excerpt {
+            font-size: 1.1rem;
+            opacity: 0.95;
+            margin-bottom: 20px;
+            max-width: 800px;
+        }
+
+        .featured-meta {
             display: flex;
             align-items: center;
-            margin-top: 15px;
+            font-size: 0.95rem;
+            opacity: 0.9;
         }
 
-        .author-avatar {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            margin-right: 10px;
+        .meta-divider {
+            margin: 0 12px;
+        }
+
+        /* Blog Grid */
+        .blog-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+            gap: 30px;
+        }
+
+        /* Blog Card */
+        .blog-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+            backdrop-filter: blur(10px);
+        }
+
+        .blog-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.25);
+        }
+
+        .card-image {
+            position: relative;
+            height: 220px;
+            overflow: hidden;
+        }
+
+        .card-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.5s ease;
+        }
+
+        .blog-card:hover .card-image img {
+            transform: scale(1.08);
+        }
+
+        .category-badge {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: white;
+        }
+
+        .category-badge.merchandise { background: #4caf50; }
+        .category-badge.updates { background: #2196f3; }
+        .category-badge.security { background: #ff9800; }
+        .category-badge.events { background: #e91e63; }
+        .category-badge.academics { background: #9c27b0; }
+        .category-badge.achievements { background: #f44336; }
+
+        .card-content {
+            padding: 25px;
+        }
+
+        .card-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin-bottom: 12px;
+            color: #333;
+            line-height: 1.3;
+            transition: color 0.3s ease;
+        }
+
+        .blog-card:hover .card-title {
+            color: #4e54c8;
+        }
+
+        .card-excerpt {
+            color: #666;
+            font-size: 0.95rem;
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+
+        .card-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-top: 15px;
+            border-top: 1px solid rgba(0, 0, 0, 0.08);
+        }
+
+        .meta-date {
+            color: #888;
+            font-size: 0.85rem;
+        }
+
+        .read-more {
+            color: #4e54c8;
+            font-size: 0.9rem;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+
+        .read-more:hover {
+            color: #8f94fb;
+            transform: translateX(3px);
+            display: inline-block;
+        }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .blog-grid {
+                grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            }
         }
 
         @media (max-width: 768px) {
             .blog-header {
-                padding: 30px 0;
+                padding: 15px 0;
             }
+            
+            .blog-header h1 {
+                font-size: 2rem;
+            }
+            
+            .blog-container {
+                padding: 20px 15px 40px;
+            }
+
+            .featured-image-wrapper {
+                height: 350px;
+            }
+
+            .featured-content {
+                padding: 25px;
+            }
+
+            .featured-title {
+                font-size: 1.6rem;
+            }
+
+            .featured-excerpt {
+                font-size: 1rem;
+            }
+
+            .blog-grid {
+                grid-template-columns: 1fr;
+                gap: 25px;
+            }
+
+            .card-image {
+                height: 200px;
+            }
+
+            .card-content {
+                padding: 20px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .featured-image-wrapper {
+                height: 280px;
+            }
+
+            .featured-content {
+                padding: 20px;
+            }
+
+            .featured-title {
+                font-size: 1.4rem;
+            }
+
             .blog-card {
-                margin-bottom: 20px;
+                border-radius: 12px;
             }
         }
                 .area {
