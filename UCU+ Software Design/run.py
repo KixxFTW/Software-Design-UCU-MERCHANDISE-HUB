@@ -1190,7 +1190,21 @@ def success():
 #PAYMENT HTML ROUTE
 @app.route('/payment')
 def payment():
-    return render_template('Payment.html')
+    if 'student_id' not in session:
+        flash('Please log in to access payment.', 'danger')
+        return redirect('/')
+
+    full_name = f"{session.get('first_name', '')} {session.get('last_name', '')}"
+    initials = ''.join([name[0] for name in full_name.split() if name])
+
+    return render_template(
+        'Payment.html',
+        first_name=session.get('first_name'),
+        last_name=session.get('last_name'),
+        student_id=session.get('student_id'),
+        user_initials=initials,
+        user_name=full_name
+    )
 
 @app.route('/Settings')
 def settings_redirect():
@@ -1603,7 +1617,10 @@ def delete_account():
 def instructor_settings():
     if 'instructor_id' not in session:
         return redirect(url_for('instructor_login'))
-    
+
+    full_name = f"{session.get('first_name', '')} {session.get('last_name', '')}"
+    initials = ''.join([name[0] for name in full_name.split() if name])
+
     if request.method == 'POST':
         if 'change_password' in request.form:
             current_password = request.form['current_password']
@@ -1647,8 +1664,8 @@ def instructor_settings():
             finally:
                 cursor.close()
                 conn.close()
-    
-    return render_template('InstructorSettings.html')
+
+    return render_template('InstructorSettings.html', full_name=full_name, user_initials=initials)
 
 @app.route('/instructor_payment', methods=['GET', 'POST'])
 def instructor_payment():

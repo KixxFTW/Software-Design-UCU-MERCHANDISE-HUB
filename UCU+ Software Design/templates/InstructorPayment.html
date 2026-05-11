@@ -236,32 +236,36 @@
         
         body {
             color: var(--text);
-            background-color: white;
-            background-size: cover;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
         }
-        
+
+        html, body {
+            overflow-x: hidden;
+        }
+
         .container {
             display: flex;
             min-height: 100vh;
         }
-        
+
         /* Sidebar */
         .sidebar {
-            margin-top: 70px;
-            width: 80px; /* Collapsed width */
-            background-color: rgba(255, 255, 255, 0.9);
+            margin-top: 0;
+            width: 80px;
+            background-color: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(30px);
-            box-shadow: 2px 0 5px rgba(0, 0, 0, 0.05);
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.08);
             padding: 20px 0;
             position: fixed;
             height: 100vh;
             overflow-y: auto;
             z-index: 100;
-            transition: width 0.3s ease; /* Smooth transition */
+            transition: width 0.3s ease;
         }
 
         .sidebar:hover {
-            width: 250px; /* Expanded width */
+            width: 250px;
         }
         .sidebar img {
             width: 50px;
@@ -341,31 +345,51 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 30px;
-            background-color: rgba(255, 255, 255, 0.8);
-            backdrop-filter: blur(5px);
-            padding: 15px;
-            border-radius: 10px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            margin-bottom: 40px;
+            background: white;
+            padding: 25px 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
         }
-        
+
+        .header h1 {
+            color: var(--primary);
+            font-size: 28px;
+            margin-bottom: 5px;
+        }
+
+        .header-subtitle {
+            color: var(--light-text);
+            font-size: 14px;
+        }
+
         .user-info {
             display: flex;
             align-items: center;
+            gap: 15px;
         }
         
         .user-avatar {
-            width: 40px;
-            height: 40px;
+            width: 50px;
+            height: 50px;
             border-radius: 50%;
-            background-color: var(--primary);
+            background: linear-gradient(135deg, var(--primary), var(--accent));
             color: white;
             display: flex;
             align-items: center;
             justify-content: center;
             font-weight: bold;
-            margin-right: 10px;
+            font-size: 18px;
+        }
+
+        .user-info h3 {
             font-size: 16px;
+            color: var(--text);
+        }
+
+        .user-info p {
+            font-size: 13px;
+            color: var(--light-text);
         }
 
 
